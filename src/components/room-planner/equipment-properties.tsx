@@ -1,0 +1,123 @@
+import { useAppStore } from '@/stores/app-store';
+import { useRoomStore } from '@/stores/room-store';
+import { SidePanelSection } from '@/components/layout/side-panel';
+
+export function EquipmentProperties() {
+  const selectedId = useAppStore((s) => s.selectedEquipmentId);
+  const selectEquipment = useAppStore((s) => s.selectEquipment);
+  const { room, moveEquipment, rotateEquipment, toggleLock, removeEquipment } =
+    useRoomStore();
+
+  const item = room.equipment.find((e) => e.id === selectedId);
+
+  if (!item) {
+    return (
+      <SidePanelSection title="Properties">
+        <p className="text-xs text-gray-500">
+          Select an item to view its properties.
+        </p>
+      </SidePanelSection>
+    );
+  }
+
+  const handlePositionChange = (axis: 'x' | 'y', value: string) => {
+    const num = Number(value);
+    if (isNaN(num)) return;
+    moveEquipment(item.id, {
+      ...item.position,
+      [axis]: num,
+    });
+  };
+
+  const handleRotationChange = (value: string) => {
+    const num = Number(value);
+    if (isNaN(num)) return;
+    rotateEquipment(item.id, num);
+  };
+
+  const handleDelete = () => {
+    removeEquipment(item.id);
+    selectEquipment(null);
+  };
+
+  return (
+    <SidePanelSection title="Properties">
+      <div className="flex flex-col gap-3">
+        {/* Name */}
+        <div>
+          <div
+            className="flex items-center gap-2 mb-1"
+          >
+            <div
+              className="w-3 h-3 rounded-sm"
+              style={{ backgroundColor: item.color }}
+            />
+            <span className="text-sm font-medium text-white">{item.label}</span>
+          </div>
+          <span className="text-[10px] text-gray-500">
+            {item.dimensions.width} x {item.dimensions.height} cm
+          </span>
+        </div>
+
+        {/* Position */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[10px] text-gray-500 mb-0.5">X (cm)</label>
+            <input
+              type="number"
+              value={Math.round(item.position.x)}
+              onChange={(e) => handlePositionChange('x', e.target.value)}
+              disabled={item.isLocked}
+              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-500 mb-0.5">Y (cm)</label>
+            <input
+              type="number"
+              value={Math.round(item.position.y)}
+              onChange={(e) => handlePositionChange('y', e.target.value)}
+              disabled={item.isLocked}
+              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
+            />
+          </div>
+        </div>
+
+        {/* Rotation */}
+        <div>
+          <label className="block text-[10px] text-gray-500 mb-0.5">
+            Rotation (deg)
+          </label>
+          <input
+            type="number"
+            value={item.rotation}
+            onChange={(e) => handleRotationChange(e.target.value)}
+            step={15}
+            disabled={item.isLocked}
+            className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 mt-1">
+          <button
+            onClick={() => toggleLock(item.id)}
+            className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+              item.isLocked
+                ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/40'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            {item.isLocked ? 'Unlock' : 'Lock'}
+          </button>
+          <button
+            onClick={handleDelete}
+            className="flex-1 px-2 py-1.5 rounded text-xs font-medium bg-red-900/30 text-red-400 border border-red-800/40 hover:bg-red-900/50 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </SidePanelSection>
+  );
+}
