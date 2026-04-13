@@ -187,7 +187,7 @@ export async function analyzeFloorPlan(
 
   const response = await client.messages.create({
     model: 'claude-opus-4-6',
-    max_tokens: 4096,
+    max_tokens: 16000,
     thinking: { type: 'adaptive' },
     system: SYSTEM_PROMPT,
     messages: [
@@ -214,6 +214,12 @@ export async function analyzeFloorPlan(
     ],
   });
 
+  console.log('[claude-vision] stop_reason:', response.stop_reason);
+  console.log(
+    '[claude-vision] block types:',
+    response.content.map((b) => b.type),
+  );
+
   // Concatenate all text blocks in the response (skip thinking blocks).
   const text = response.content
     .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
@@ -222,7 +228,13 @@ export async function analyzeFloorPlan(
     .trim();
 
   if (!text) {
-    throw new Error('Claude returned no text content.');
+    const hint =
+      response.stop_reason === 'max_tokens'
+        ? ' Response hit max_tokens during thinking — try a smaller/simpler image.'
+        : '';
+    throw new Error(
+      `Claude returned no text content (stop_reason=${response.stop_reason}).${hint}`,
+    );
   }
 
   let parsed: unknown;
