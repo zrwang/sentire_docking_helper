@@ -3,6 +3,7 @@ import { useAppStore } from '@/stores/app-store';
 import { useRoomStore } from '@/stores/room-store';
 import { useIconStore } from '@/stores/icon-store';
 import { PSR_CONFIGS, isPsrConfigType } from '@/constants/psr-configs';
+import { downscaleDataUrl } from '@/utils/image-resize';
 import type { EquipmentType } from '@/types/room';
 
 interface EquipmentPropertiesProps {
@@ -110,10 +111,17 @@ export function EquipmentProperties({ itemId, onClose, embedded }: EquipmentProp
     const file = e.target.files?.[0];
     if (!file || !item) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = reader.result;
       if (typeof dataUrl !== 'string') return;
-      setIcon(item.type, dataUrl);
+      // Downscale before persisting so the data URL fits in localStorage.
+      const compact = await downscaleDataUrl(dataUrl).catch(() => dataUrl);
+      const ok = setIcon(item.type, compact);
+      if (!ok) {
+        window.alert(
+          'Could not save this icon to browser storage (it may be too large or storage is full). It will appear for this session but may be lost on reload.'
+        );
+      }
 
       // Preserve the icon's aspect ratio by adjusting the item's dimensions.
       // Keep the current larger side fixed so the item doesn't jump in size;
@@ -137,7 +145,7 @@ export function EquipmentProperties({ itemId, onClose, embedded }: EquipmentProp
         }
         resizeEquipment(item.id, { width: newW, height: newH });
       };
-      img.src = dataUrl;
+      img.src = compact;
     };
     reader.readAsDataURL(file);
     // allow re-selecting the same file later

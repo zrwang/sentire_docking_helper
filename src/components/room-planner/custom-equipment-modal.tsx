@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useCustomEquipmentStore } from '@/stores/custom-equipment-store';
 import { useIconStore } from '@/stores/icon-store';
+import { downscaleDataUrl } from '@/utils/image-resize';
 
 interface CustomEquipmentModalProps {
   open: boolean;
@@ -41,8 +42,13 @@ export function CustomEquipmentModal({ open, onClose }: CustomEquipmentModalProp
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') setIconDataUrl(reader.result);
+    reader.onload = async () => {
+      if (typeof reader.result !== 'string') return;
+      // Downscale immediately so the preview matches what gets persisted.
+      const compact = await downscaleDataUrl(reader.result).catch(
+        () => reader.result as string
+      );
+      setIconDataUrl(compact);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -59,7 +65,14 @@ export function CustomEquipmentModal({ open, onClose }: CustomEquipmentModalProp
       color,
       shape,
     });
-    if (iconDataUrl) setIcon(type, iconDataUrl);
+    if (iconDataUrl) {
+      const ok = setIcon(type, iconDataUrl);
+      if (!ok) {
+        window.alert(
+          'Could not save this icon to browser storage (it may be too large or storage is full). It will appear for this session but may be lost on reload.'
+        );
+      }
+    }
     reset();
     onClose();
   };

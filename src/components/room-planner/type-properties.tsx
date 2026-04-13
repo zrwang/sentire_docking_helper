@@ -8,6 +8,7 @@ import {
   getTypeOverride,
 } from '@/stores/type-overrides-store';
 import { useCustomEquipmentStore } from '@/stores/custom-equipment-store';
+import { downscaleDataUrl } from '@/utils/image-resize';
 
 interface TypePropertiesProps {
   type: EquipmentType;
@@ -81,10 +82,16 @@ export function TypeProperties({ type, onClose }: TypePropertiesProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = reader.result;
       if (typeof dataUrl !== 'string') return;
-      setIcon(type, dataUrl);
+      const compact = await downscaleDataUrl(dataUrl).catch(() => dataUrl);
+      const ok = setIcon(type, compact);
+      if (!ok) {
+        window.alert(
+          'Could not save this icon to browser storage (it may be too large or storage is full). It will appear for this session but may be lost on reload.'
+        );
+      }
       // Keep aspect ratio based on the current defaults.
       const img = new Image();
       img.onload = () => {
@@ -104,7 +111,7 @@ export function TypeProperties({ type, onClose }: TypePropertiesProps) {
         }
         propagateSize(newW, newH);
       };
-      img.src = dataUrl;
+      img.src = compact;
     };
     reader.readAsDataURL(file);
     e.target.value = '';
