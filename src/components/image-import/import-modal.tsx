@@ -70,9 +70,13 @@ export function ImportModal() {
     reset,
   } = useImportStore();
 
-  const { replaceRoom } = useRoomStore();
+  const { replaceRoom, setBackgroundImage } = useRoomStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showKey, setShowKey] = useState(false);
+  // Real-world width (cm) the user wants the uploaded image to represent.
+  // Empty means "don't change the current room dimensions" -- the image just
+  // slots in behind whatever layout is already on the canvas.
+  const [bgWidthCm, setBgWidthCm] = useState<string>('');
   // Local mirror of the analyzing state so the spinner paints immediately
   // under flushSync — Zustand updates go through an external subscription
   // and can't be forced to commit the same way.
@@ -230,6 +234,35 @@ export function ImportModal() {
     closeImport();
   };
 
+  /**
+   * Skip AI entirely -- set the uploaded image as the canvas background so
+   * the user can manually drag equipment onto it. If the user provided a
+   * real-world width, resize the room to match (preserving the image's
+   * aspect ratio); otherwise leave the current room dimensions alone.
+   */
+  const handleUseAsBackground = () => {
+    if (!imageDataUrl) {
+      setError('Please upload an image first.');
+      return;
+    }
+    setBackgroundImage(imageDataUrl, 0.5);
+
+    const widthCm = Number(bgWidthCm);
+    if (imageSize && Number.isFinite(widthCm) && widthCm > 0) {
+      const aspect = imageSize.height / imageSize.width;
+      const clampedW = Math.max(
+        DEFAULT_ROOM.gridSize,
+        Math.min(widthCm, 10000)
+      );
+      const newHeight = Math.max(DEFAULT_ROOM.gridSize, clampedW * aspect);
+      useRoomStore.getState().setRoomDimensions(clampedW, newHeight);
+    }
+
+    setBgWidthCm('');
+    reset();
+    closeImport();
+  };
+
   const scaleValue = scaleOverride ?? result?.scaleMetersPerPixel ?? null;
 
   return (
@@ -312,6 +345,46 @@ export function ImportModal() {
                 />
               </div>
             )}
+          </section>
+
+          {/* Manual: use the image as a background reference (no AI). */}
+          <section className="border border-gray-700 rounded p-3 bg-gray-950/40">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  Use as Background Only
+                </h3>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Skip AI and drop the image behind the canvas as a reference
+                  you can trace by dragging equipment on top.
+                </p>
+              </div>
+              <button
+                onClick={handleUseAsBackground}
+                disabled={!imageDataUrl}
+                className="shrink-0 px-3 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed rounded"
+              >
+                Use as Background
+              </button>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-[11px] text-gray-400 whitespace-nowrap">
+                Image width (cm)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={10}
+                placeholder="optional"
+                value={bgWidthCm}
+                onChange={(e) => setBgWidthCm(e.target.value)}
+                className="w-28 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs"
+              />
+              <span className="text-[11px] text-gray-500">
+                leave blank to keep the current room size; otherwise height
+                scales to preserve aspect ratio.
+              </span>
+            </div>
           </section>
 
           {/* Analyze */}
