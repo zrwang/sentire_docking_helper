@@ -2,11 +2,25 @@ import { useAppStore } from '@/stores/app-store';
 import { useRoomStore } from '@/stores/room-store';
 import { useImportStore } from '@/stores/import-store';
 import { MIN_ROOM_SIZE, MAX_ROOM_SIZE } from '@/constants/room-defaults';
+import { createPartialNephrectomyPreset } from '@/constants/preset-layouts';
 
 export function AppHeader() {
-  const { snapEnabled, gridVisible, toggleSnap, toggleGrid } = useAppStore();
-  const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage } = useRoomStore();
+  const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment } = useAppStore();
+  const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage, replaceRoom } = useRoomStore();
   const openImport = useImportStore((s) => s.openImport);
+
+  const handleLoadDemo = () => {
+    if (
+      room.equipment.length > 0 &&
+      !window.confirm(
+        'Load the demo "Partial Nephrectomy" layout? This will replace the current room.'
+      )
+    ) {
+      return;
+    }
+    selectEquipment(null);
+    replaceRoom(createPartialNephrectomyPreset());
+  };
 
   const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, Number(e.target.value)));
@@ -77,6 +91,14 @@ export function AppHeader() {
           className="px-2.5 py-1 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 rounded"
         >
           Import Plan
+        </button>
+
+        <button
+          onClick={handleLoadDemo}
+          title="Load a pre-built Partial Nephrectomy OR layout"
+          className="px-2.5 py-1 text-xs font-medium bg-teal-700 hover:bg-teal-600 rounded"
+        >
+          Load Demo
         </button>
 
         <div className="flex items-center gap-1">
