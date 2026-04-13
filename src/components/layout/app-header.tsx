@@ -3,6 +3,7 @@ import { useRoomStore } from '@/stores/room-store';
 import { useImportStore } from '@/stores/import-store';
 import { MIN_ROOM_SIZE, MAX_ROOM_SIZE } from '@/constants/room-defaults';
 import { createPartialNephrectomyPreset } from '@/constants/preset-layouts';
+import { LayoutsMenu } from './layouts-menu';
 
 export function AppHeader() {
   const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode } = useAppStore();
@@ -113,6 +114,8 @@ export function AppHeader() {
         >
           Load Demo
         </button>
+
+        <LayoutsMenu />
 
         <button
           onClick={handleToggleContourEdit}

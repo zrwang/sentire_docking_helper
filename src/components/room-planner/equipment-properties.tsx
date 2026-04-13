@@ -7,8 +7,18 @@ import { SidePanelSection } from '@/components/layout/side-panel';
 export function EquipmentProperties() {
   const selectedId = useAppStore((s) => s.selectedEquipmentId);
   const selectEquipment = useAppStore((s) => s.selectEquipment);
-  const { room, moveEquipment, rotateEquipment, toggleLock, removeEquipment } =
-    useRoomStore();
+  const itemContourEditId = useAppStore((s) => s.itemContourEditId);
+  const setItemContourEditId = useAppStore((s) => s.setItemContourEditId);
+  const {
+    room,
+    moveEquipment,
+    rotateEquipment,
+    resizeEquipment,
+    convertEquipmentToPolygon,
+    setEquipmentPolygon,
+    toggleLock,
+    removeEquipment,
+  } = useRoomStore();
   const icons = useIconStore((s) => s.icons);
   const setIcon = useIconStore((s) => s.setIcon);
   const clearIcon = useIconStore((s) => s.clearIcon);
@@ -39,6 +49,27 @@ export function EquipmentProperties() {
     const num = Number(value);
     if (isNaN(num)) return;
     rotateEquipment(item.id, num);
+  };
+
+  const handleSizeChange = (axis: 'width' | 'height', value: string) => {
+    const num = Number(value);
+    if (isNaN(num) || num <= 0) return;
+    resizeEquipment(item.id, { ...item.dimensions, [axis]: num });
+  };
+
+  const isEditingShape = itemContourEditId === item.id;
+  const handleToggleShapeEdit = () => {
+    if (isEditingShape) {
+      setItemContourEditId(null);
+    } else {
+      if (!item.polygon) convertEquipmentToPolygon(item.id);
+      setItemContourEditId(item.id);
+    }
+  };
+
+  const handleResetShape = () => {
+    setEquipmentPolygon(item.id, null);
+    if (isEditingShape) setItemContourEditId(null);
   };
 
   const handleDelete = () => {
@@ -105,6 +136,36 @@ export function EquipmentProperties() {
           </div>
         </div>
 
+        {/* Size */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[10px] text-gray-500 mb-0.5">
+              Width (cm)
+            </label>
+            <input
+              type="number"
+              value={Math.round(item.dimensions.width)}
+              min={5}
+              onChange={(e) => handleSizeChange('width', e.target.value)}
+              disabled={item.isLocked}
+              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-500 mb-0.5">
+              Height (cm)
+            </label>
+            <input
+              type="number"
+              value={Math.round(item.dimensions.height)}
+              min={5}
+              onChange={(e) => handleSizeChange('height', e.target.value)}
+              disabled={item.isLocked}
+              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
+            />
+          </div>
+        </div>
+
         {/* Rotation */}
         <div>
           <label className="block text-[10px] text-gray-500 mb-0.5">
@@ -118,6 +179,32 @@ export function EquipmentProperties() {
             disabled={item.isLocked}
             className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
           />
+        </div>
+
+        {/* Shape / contour */}
+        <div className="flex gap-2">
+          <button
+            onClick={handleToggleShapeEdit}
+            disabled={item.isLocked}
+            title="Drag vertices to reshape. Click an edge midpoint to add a vertex. Alt+click a vertex to delete."
+            className={`flex-1 px-2 py-1.5 rounded text-xs font-medium disabled:opacity-50 ${
+              isEditingShape
+                ? 'bg-amber-500 text-black hover:bg-amber-400'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            {isEditingShape ? 'Done Shape' : 'Edit Shape'}
+          </button>
+          {item.polygon && (
+            <button
+              onClick={handleResetShape}
+              disabled={item.isLocked}
+              title="Revert to the default rectangular outline"
+              className="px-2 py-1.5 rounded text-xs bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50"
+            >
+              Reset
+            </button>
+          )}
         </div>
 
         {/* Custom icon (applies to all items of this type) */}

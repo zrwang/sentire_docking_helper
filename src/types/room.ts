@@ -56,6 +56,12 @@ export interface Equipment {
   color: string;
   zIndex: number;
   shape?: 'rect' | 'circle';
+  /**
+   * Optional custom polygon outline (local coords, origin at item's top-left,
+   * values in 0..dimensions.width x 0..dimensions.height). When present, the
+   * item renders as this polygon instead of its default rect/circle shape.
+   */
+  polygon?: Position[];
 }
 
 export type RoomShapeType = 'rectangular' | 'polygon';

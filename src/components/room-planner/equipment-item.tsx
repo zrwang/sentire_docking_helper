@@ -7,6 +7,7 @@ import { useRoomStore } from '@/stores/room-store';
 import { useIconStore } from '@/stores/icon-store';
 import { snapToGrid } from '@/utils/snap';
 import { getOverlappingItems } from '@/utils/collision';
+import { ItemContourEditor } from './item-contour-editor';
 
 interface EquipmentItemProps {
   item: Equipment;
@@ -15,7 +16,8 @@ interface EquipmentItemProps {
 
 export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   const groupRef = useRef<Konva.Group>(null);
-  const { selectedEquipmentId, selectEquipment, snapEnabled } = useAppStore();
+  const { selectedEquipmentId, selectEquipment, snapEnabled, itemContourEditId } = useAppStore();
+  const isContourEditing = itemContourEditId === item.id;
   const { room, moveEquipment, rotateEquipment, removeEquipment } = useRoomStore();
   const iconDataUrl = useIconStore((s) => s.icons[item.type]);
   const [iconImage, setIconImage] = useState<HTMLImageElement | null>(null);
@@ -149,7 +151,7 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
       offsetX={hw}
       offsetY={hh}
       rotation={item.rotation}
-      draggable={!item.isLocked}
+      draggable={!item.isLocked && !isContourEditing}
       onDragStart={handleSelectOnInteract}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
@@ -215,6 +217,15 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
             />
           )}
         </>
+      ) : item.polygon && item.polygon.length >= 3 ? (
+        <Line
+          points={item.polygon.flatMap((p) => [p.x, p.y])}
+          closed
+          fill={fillColor}
+          opacity={isOverlapping ? 0.7 : 0.7}
+          stroke={isSelected ? '#60A5FA' : '#4B5563'}
+          strokeWidth={isSelected ? 1.5 / scale : 0.5 / scale}
+        />
       ) : isCircle ? (
         <Circle
           x={hw}
@@ -304,6 +315,9 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
           />
         </>
       )}
+
+      {/* Per-item contour editor overlay */}
+      {isContourEditing && <ItemContourEditor item={item} scale={scale} />}
 
       {/* In-canvas delete badge shown on the selected item */}
       {isSelected && !item.isLocked && (
