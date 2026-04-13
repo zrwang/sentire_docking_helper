@@ -27,15 +27,25 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   const isSelected = selectedEquipmentId === item.id;
 
   // Load the custom icon (if any) into an <img> so Konva can paint it.
+  // Important: assign `onload` *before* `src`, and also handle the case where
+  // the image was already decoded (data URLs can complete synchronously in
+  // some browsers, firing before the listener is attached).
   useEffect(() => {
     if (!iconDataUrl) {
       setIconImage(null);
       return;
     }
     const img = new window.Image();
+    let cancelled = false;
+    img.onload = () => {
+      if (!cancelled) setIconImage(img);
+    };
     img.src = iconDataUrl;
-    img.onload = () => setIconImage(img);
+    if (img.complete && img.naturalWidth > 0) {
+      setIconImage(img);
+    }
     return () => {
+      cancelled = true;
       img.onload = null;
     };
   }, [iconDataUrl]);
