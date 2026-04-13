@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useImportStore } from '@/stores/import-store';
 import { useRoomStore } from '@/stores/room-store';
@@ -72,15 +73,26 @@ export function ImportModal() {
       setError('Please enter your Anthropic API key.');
       return;
     }
-    setStatus('analyzing');
-    setError(null);
+    // Force the analyzing state to paint BEFORE any work that might throw
+    // synchronously (parseDataUrl, `new Anthropic(...)`, etc). Without
+    // flushSync a fast synchronous error would skip the spinner entirely.
+    flushSync(() => {
+      setStatus('analyzing');
+      setError(null);
+    });
     console.log('[import] starting Claude vision analysis...');
+    const started = performance.now();
     try {
+      // Yield one animation frame so the browser actually paints the
+      // spinner before we hand control to the network request.
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
       const res = await analyzeFloorPlan(imageDataUrl, apiKey.trim());
-      console.log('[import] analysis complete:', res);
+      const elapsed = Math.round((performance.now() - started) / 100) / 10;
+      console.log(`[import] analysis complete in ${elapsed}s:`, res);
       setResult(res);
     } catch (err) {
-      console.error('[import] analysis failed:', err);
+      const elapsed = Math.round((performance.now() - started) / 100) / 10;
+      console.error(`[import] analysis failed after ${elapsed}s:`, err);
       const msg =
         err instanceof Error
           ? err.message
