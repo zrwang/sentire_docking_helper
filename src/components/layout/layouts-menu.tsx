@@ -11,6 +11,8 @@ export function LayoutsMenu() {
   const layouts = useLayoutsStore((s) => s.layouts);
   const save = useLayoutsStore((s) => s.save);
   const remove = useLayoutsStore((s) => s.remove);
+  const demoName = useLayoutsStore((s) => s.demoName);
+  const setDemo = useLayoutsStore((s) => s.setDemo);
   const room = useRoomStore((s) => s.room);
   const replaceRoom = useRoomStore((s) => s.replaceRoom);
   const selectEquipment = useAppStore((s) => s.selectEquipment);
@@ -50,6 +52,12 @@ export function LayoutsMenu() {
     remove(name);
   };
 
+  const handleToggleDemo = (name: string) => {
+    // Click the star to pin, click it again to clear back to the built-in
+    // Partial Nephrectomy preset.
+    setDemo(demoName === name ? null : name);
+  };
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -72,32 +80,57 @@ export function LayoutsMenu() {
                 No saved layouts yet. Click above to save the current room.
               </p>
             ) : (
-              entries.map((entry) => (
-                <div
-                  key={entry.name}
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-800 group"
-                >
-                  <button
-                    onClick={() => handleLoad(entry.name)}
-                    className="flex-1 min-w-0 text-left"
-                    title="Load this layout (replaces current)"
+              entries.map((entry) => {
+                const isDemo = demoName === entry.name;
+                return (
+                  <div
+                    key={entry.name}
+                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-800 group"
                   >
-                    <div className="truncate text-gray-200">{entry.name}</div>
-                    <div className="text-[10px] text-gray-500">
-                      {new Date(entry.savedAt).toLocaleString()} -{' '}
-                      {entry.room.equipment.length} item
-                      {entry.room.equipment.length === 1 ? '' : 's'}
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(entry.name)}
-                    title="Delete"
-                    className="text-[10px] text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))
+                    <button
+                      onClick={() => handleToggleDemo(entry.name)}
+                      title={
+                        isDemo
+                          ? 'Unpin as demo (revert Load Demo to the built-in preset)'
+                          : 'Pin this layout as the "Load Demo" target'
+                      }
+                      className={`shrink-0 text-sm leading-none ${
+                        isDemo
+                          ? 'text-amber-400 hover:text-amber-300'
+                          : 'text-gray-600 hover:text-amber-400'
+                      }`}
+                    >
+                      {isDemo ? '★' : '☆'}
+                    </button>
+                    <button
+                      onClick={() => handleLoad(entry.name)}
+                      className="flex-1 min-w-0 text-left"
+                      title="Load this layout (replaces current)"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="truncate text-gray-200">{entry.name}</span>
+                        {isDemo && (
+                          <span className="shrink-0 text-[9px] uppercase tracking-wide text-amber-400/80">
+                            demo
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-500">
+                        {new Date(entry.savedAt).toLocaleString()} -{' '}
+                        {entry.room.equipment.length} item
+                        {entry.room.equipment.length === 1 ? '' : 's'}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(entry.name)}
+                      title="Delete"
+                      className="text-[10px] text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useAppStore } from '@/stores/app-store';
 import { useRoomStore } from '@/stores/room-store';
 import { useImportStore } from '@/stores/import-store';
+import { useLayoutsStore } from '@/stores/layouts-store';
 import { MIN_ROOM_SIZE, MAX_ROOM_SIZE } from '@/constants/room-defaults';
 import { createPartialNephrectomyPreset } from '@/constants/preset-layouts';
 import { LayoutsMenu } from './layouts-menu';
@@ -9,6 +10,10 @@ export function AppHeader() {
   const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode } = useAppStore();
   const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage, replaceRoom, convertRectToPolygon, normalizeRoom } = useRoomStore();
   const openImport = useImportStore((s) => s.openImport);
+  const demoName = useLayoutsStore((s) => s.demoName);
+  const demoLayout = useLayoutsStore((s) =>
+    s.demoName ? s.layouts[s.demoName] : undefined
+  );
 
   const handleToggleContourEdit = () => {
     if (!contourEditMode) {
@@ -24,16 +29,20 @@ export function AppHeader() {
   };
 
   const handleLoadDemo = () => {
+    // Prefer the user-pinned saved layout if one exists; fall back to the
+    // built-in Partial Nephrectomy preset otherwise.
+    const pinned = demoLayout;
+    const demoLabel = pinned ? pinned.name : 'Partial Nephrectomy';
     if (
       room.equipment.length > 0 &&
       !window.confirm(
-        'Load the demo "Partial Nephrectomy" layout? This will replace the current room.'
+        `Load the demo "${demoLabel}" layout? This will replace the current room.`
       )
     ) {
       return;
     }
     selectEquipment(null);
-    replaceRoom(createPartialNephrectomyPreset());
+    replaceRoom(pinned ? pinned.room : createPartialNephrectomyPreset());
   };
 
   const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,10 +118,19 @@ export function AppHeader() {
 
         <button
           onClick={handleLoadDemo}
-          title="Load a pre-built Partial Nephrectomy OR layout"
+          title={
+            demoName
+              ? `Load the pinned demo layout: "${demoName}"`
+              : 'Load the built-in Partial Nephrectomy OR layout. Pin any saved layout as the demo from the Layouts menu.'
+          }
           className="px-2.5 py-1 text-xs font-medium bg-teal-700 hover:bg-teal-600 rounded"
         >
           Load Demo
+          {demoName && (
+            <span className="ml-1 text-[10px] text-teal-200">
+              ★
+            </span>
+          )}
         </button>
 
         <LayoutsMenu />
