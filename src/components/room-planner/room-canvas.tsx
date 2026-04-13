@@ -6,6 +6,11 @@ import { useAppStore } from '@/stores/app-store';
 import { useCanvasZoom } from '@/hooks/use-canvas-zoom';
 import { MIN_ROOM_SIZE, MAX_ROOM_SIZE } from '@/constants/room-defaults';
 import { snapToGrid } from '@/utils/snap';
+import { PALETTE_ADD_MIME } from '@/constants/palette-dnd';
+import { EQUIPMENT_CATALOG } from '@/constants/room-defaults';
+import { useCustomEquipmentStore } from '@/stores/custom-equipment-store';
+import { getTypeOverride } from '@/stores/type-overrides-store';
+import type { EquipmentType } from '@/types/room';
 import { RoomGrid } from './room-grid';
 import { RoomWalls } from './room-walls';
 import { EquipmentItem } from './equipment-item';
@@ -14,7 +19,7 @@ import { ContourEditor } from './contour-editor';
 
 export function RoomCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { room, setRoomDimensions } = useRoomStore();
+  const { room, setRoomDimensions, addEquipmentAt } = useRoomStore();
   const { gridVisible, snapEnabled, selectEquipment, contourEditMode } = useAppStore();
   const { scale, position, stageRef, handleWheel, resetZoom } =
     useCanvasZoom(0.6);
@@ -97,8 +102,68 @@ export function RoomCanvas() {
   const showRoomResizeHandle =
     !contourEditMode && room.shape !== 'polygon';
 
+  // Resolve a catalog entry's default dimensions so we can drop the item
+  // centered on the cursor (same defaults that addEquipmentAt will actually
+  // use, so visual placement and final placement match).
+  const resolveDropDimensions = (type: EquipmentType) => {
+    const catalog =
+      EQUIPMENT_CATALOG.find((e) => e.type === type) ??
+      useCustomEquipmentStore.getState().entries.find((e) => e.type === type);
+    if (!catalog) return null;
+    const override = getTypeOverride(type);
+    return override?.dimensions
+      ? { ...override.dimensions }
+      : { ...catalog.dimensions };
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    // Only treat drags carrying our add-MIME as a valid target -- everything
+    // else (text, files, reorder payloads from the sidebar) should pass
+    // through. Browsers hide the MIME list during dragover for security, so
+    // check `types` instead of `getData`.
+    if (!e.dataTransfer.types.includes(PALETTE_ADD_MIME)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const type = e.dataTransfer.getData(PALETTE_ADD_MIME) as EquipmentType;
+    if (!type) return;
+    e.preventDefault();
+
+    const stage = stageRef.current;
+    const container = containerRef.current;
+    if (!stage || !container) return;
+
+    // Convert the client-space drop point into stage-local (room) coords.
+    const rect = container.getBoundingClientRect();
+    const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
+    const transform = stage.getAbsoluteTransform().copy().invert();
+    const roomPoint = transform.point({ x: clientX, y: clientY });
+
+    // Center the item on the cursor using its resolved default dimensions.
+    const dims = resolveDropDimensions(type);
+    const topLeft = dims
+      ? { x: roomPoint.x - dims.width / 2, y: roomPoint.y - dims.height / 2 }
+      : roomPoint;
+    const position = snapEnabled
+      ? {
+          x: snapToGrid(topLeft.x, room.gridSize),
+          y: snapToGrid(topLeft.y, room.gridSize),
+        }
+      : topLeft;
+
+    addEquipmentAt(type, position);
+  };
+
   return (
-    <div ref={containerRef} className="flex-1 bg-gray-950 overflow-hidden relative">
+    <div
+      ref={containerRef}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      className="flex-1 bg-gray-950 overflow-hidden relative"
+    >
       <Stage
         ref={stageRef}
         width={containerSize.width}

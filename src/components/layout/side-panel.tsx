@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 
 interface SidePanelProps {
   children: ReactNode;
@@ -27,21 +27,19 @@ function loadWidth(): number {
  */
 export function SidePanel({ children }: SidePanelProps) {
   const [width, setWidth] = useState<number>(loadWidth);
-  const draggingRef = useRef(false);
+  const widthRef = useRef(width);
+  widthRef.current = width;
 
-  // Persist width once dragging stops.
-  useEffect(() => {
-    if (draggingRef.current) return;
+  const persistWidth = (w: number) => {
     try {
-      localStorage.setItem(WIDTH_STORAGE_KEY, String(width));
+      localStorage.setItem(WIDTH_STORAGE_KEY, String(w));
     } catch {
       /* ignore */
     }
-  }, [width]);
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    draggingRef.current = true;
     const startX = e.clientX;
     const startWidth = width;
     const prevCursor = document.body.style.cursor;
@@ -58,13 +56,14 @@ export function SidePanel({ children }: SidePanelProps) {
       setWidth(next);
     };
     const onUp = () => {
-      draggingRef.current = false;
       document.body.style.cursor = prevCursor;
       document.body.style.userSelect = prevUserSelect;
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
-      // Trigger the effect-based persist with the final width.
-      setWidth((w) => w);
+      // Persist the final width directly -- doing this through a state-driven
+      // effect is unreliable because React bails out on Object.is-equal
+      // updates, so the final value may never re-trigger the effect.
+      persistWidth(widthRef.current);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);

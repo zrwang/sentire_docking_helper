@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { EQUIPMENT_CATALOG, HIDDEN_PALETTE_TYPES } from '@/constants/room-defaults';
 import { PSR_CONFIGS, PSR_CONFIG_TYPES } from '@/constants/psr-configs';
-import { useRoomStore } from '@/stores/room-store';
 import { useCustomEquipmentStore } from '@/stores/custom-equipment-store';
 import { useIconStore } from '@/stores/icon-store';
 import { useContextMenuStore } from '@/stores/context-menu-store';
@@ -12,12 +11,12 @@ import {
 import type { EquipmentType } from '@/types/room';
 import { SidePanelSection } from '@/components/layout/side-panel';
 import { useListReorder, type ReorderRowProps } from '@/hooks/use-list-reorder';
+import { PALETTE_ADD_MIME } from '@/constants/palette-dnd';
 import { CustomEquipmentModal } from './custom-equipment-modal';
 
 const PSR_TYPE_SET = new Set<string>(PSR_CONFIG_TYPES);
 
 export function EquipmentPalette() {
-  const addEquipment = useRoomStore((s) => s.addEquipment);
   const customEntries = useCustomEquipmentStore((s) => s.entries);
   const removeCustomEntry = useCustomEquipmentStore((s) => s.removeEntry);
   const icons = useIconStore((s) => s.icons);
@@ -60,8 +59,40 @@ export function EquipmentPalette() {
     );
   };
 
-  const handleAdd = (type: EquipmentType) => {
-    addEquipment(type);
+  /**
+   * Compose the reorder hook's dragStart with an extra setData call so the
+   * same drag can land either on another sidebar row (reorder) or on the
+   * canvas (add-to-room). Each drop zone reads only the MIME it cares about.
+   */
+  const withAddPayload = (
+    baseProps: ReorderRowProps,
+    type: EquipmentType
+  ): ReorderRowProps => ({
+    ...baseProps,
+    onDragStart: (e) => {
+      baseProps.onDragStart(e);
+      try {
+        e.dataTransfer.setData(PALETTE_ADD_MIME, type as string);
+      } catch {
+        /* ignore */
+      }
+    },
+  });
+
+  /**
+   * Native dragStart for elements that shouldn't participate in reorder --
+   * specifically the PSR config variants, which drag onto the canvas but
+   * don't themselves reorder within the main list.
+   */
+  const handleAddDragStart = (e: React.DragEvent, type: EquipmentType) => {
+    try {
+      e.dataTransfer.setData(PALETTE_ADD_MIME, type as string);
+      e.dataTransfer.effectAllowed = 'copy';
+    } catch {
+      /* ignore */
+    }
+    // Stop the drag from bubbling up to the reorder-draggable ancestor.
+    e.stopPropagation();
   };
 
   const handleContextMenu = (
@@ -245,16 +276,15 @@ export function EquipmentPalette() {
     >
       <span
         className="text-gray-600 group-hover:text-gray-400 text-xs leading-none cursor-grab select-none shrink-0"
-        title="Drag to reorder"
+        title="Drag onto the canvas to add. Right-click to edit defaults."
         aria-hidden="true"
       >
         ⋮⋮
       </span>
-      <button
-        onClick={() => handleAdd(entry.type)}
+      <div
         onContextMenu={(e) => handleContextMenu(e, entry.type)}
-        title="Click to add. Right-click to edit defaults."
-        className="flex items-center gap-2 flex-1 min-w-0 text-left text-sm text-gray-300"
+        title="Drag onto the canvas to add. Right-click to edit defaults."
+        className="flex items-center gap-2 flex-1 min-w-0 text-left text-sm text-gray-300 cursor-grab"
       >
         {renderSwatch(entry.type, entry.color)}
         <div className="flex flex-col min-w-0">
@@ -263,7 +293,7 @@ export function EquipmentPalette() {
             {entry.dimensions.width} x {entry.dimensions.height} cm
           </span>
         </div>
-      </button>
+      </div>
       <button
         onClick={(e) => handleHide(e, entry.type)}
         title="Hide this equipment from the palette"
@@ -299,14 +329,15 @@ export function EquipmentPalette() {
             const icon = icons[cfg.type];
             return (
               <div key={cfg.type} className="relative group">
-                <button
-                  onClick={() => handleAdd(cfg.type)}
+                <div
+                  draggable
+                  onDragStart={(e) => handleAddDragStart(e, cfg.type)}
                   onContextMenu={(e) => handleContextMenu(e, cfg.type)}
-                  title={`${cfg.description} Click to add; right-click to edit defaults.`}
-                  className="flex flex-col items-center gap-1 w-full px-1 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200"
+                  title={`${cfg.description} Drag onto the canvas to add; right-click to edit defaults.`}
+                  className="flex flex-col items-center gap-1 w-full px-1 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 cursor-grab"
                 >
                   {icon ? (
-                    <img src={icon} alt="" className="w-6 h-6 object-contain" />
+                    <img src={icon} alt="" className="w-6 h-6 object-contain" draggable={false} />
                   ) : (
                     <div
                       className="w-6 h-4 rounded-sm"
@@ -314,7 +345,7 @@ export function EquipmentPalette() {
                     />
                   )}
                   <span className="text-[10px] font-medium">{cfg.shortLabel}</span>
-                </button>
+                </div>
                 <button
                   onClick={(e) => handleHide(e, cfg.type)}
                   title="Hide this config from the palette"
@@ -333,13 +364,15 @@ export function EquipmentPalette() {
     <SidePanelSection title="Equipment" storageKey="equipment">
       <div className="flex flex-col gap-1">
         {mainTokens.map((token, i) => {
-          const dragProps = mainReorder.getRowProps(i);
+          const baseProps = mainReorder.getRowProps(i);
           if (token === PSR_PICKER_TOKEN) {
-            return renderPsrPicker(dragProps);
+            // The picker row itself only participates in reorder; dragging a
+            // specific PSR variant onto the canvas uses per-variant handlers.
+            return renderPsrPicker(baseProps);
           }
           const entry = plainEntries.find((e) => e.type === token);
           if (!entry) return null;
-          return renderEntry(entry, dragProps);
+          return renderEntry(entry, withAddPayload(baseProps, entry.type));
         })}
 
         {customEntries.length > 0 && (
@@ -350,7 +383,10 @@ export function EquipmentPalette() {
             {customTokens.map((token, i) => {
               const entry = customEntries.find((e) => e.type === token);
               if (!entry) return null;
-              const dragProps = customReorder.getRowProps(i);
+              const dragProps = withAddPayload(
+                customReorder.getRowProps(i),
+                entry.type as EquipmentType
+              );
               const dStyle = dragClasses(dragProps);
               return (
                 <div
@@ -365,11 +401,10 @@ export function EquipmentPalette() {
                   >
                     ⋮⋮
                   </span>
-                  <button
-                    onClick={() => handleAdd(entry.type)}
+                  <div
                     onContextMenu={(e) => handleContextMenu(e, entry.type)}
-                    title="Click to add. Right-click to edit defaults."
-                    className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                    title="Drag onto the canvas to add. Right-click to edit defaults."
+                    className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-grab"
                   >
                     {renderSwatch(entry.type, entry.color)}
                     <div className="flex flex-col min-w-0">
@@ -380,7 +415,7 @@ export function EquipmentPalette() {
                         {entry.dimensions.width} x {entry.dimensions.height} cm
                       </span>
                     </div>
-                  </button>
+                  </div>
                   <button
                     onClick={() => handleRemoveCustom(entry.type, entry.label)}
                     title="Delete this custom equipment type"
