@@ -28,7 +28,6 @@ export function EquipmentPalette() {
   const restoreAllHidden = usePaletteVisibilityStore((s) => s.restoreAll);
   const [modalOpen, setModalOpen] = useState(false);
   const [showHiddenPanel, setShowHiddenPanel] = useState(false);
-  const [showDeletedPanel, setShowDeletedPanel] = useState(false);
   // Any type in either set is excluded from the main palette.
   const excludedSet = new Set([...hiddenTypes, ...deletedTypes]);
 
@@ -146,7 +145,7 @@ export function EquipmentPalette() {
     }
     if (
       !window.confirm(
-        `Remove "${label}" from the palette? You can bring it back later from the "Removed" section.`
+        `Permanently remove "${label}" from the palette? Use "Reset palette" at the bottom of the Equipment list if you change your mind.`
       )
     ) {
       return;
@@ -304,7 +303,7 @@ export function EquipmentPalette() {
                       title={
                         h.isCustom
                           ? 'Permanently delete this custom equipment'
-                          : 'Remove from palette (recoverable from the "Removed" list)'
+                          : 'Permanently remove from the palette (use "Reset palette" at the bottom to bring it back)'
                       }
                       className="text-[10px] text-gray-400 hover:text-red-400"
                     >
@@ -325,43 +324,32 @@ export function EquipmentPalette() {
           </div>
         )}
 
-        {deletedLabels.length > 0 && (
-          <div className="mt-1 pt-1 border-t border-gray-800">
-            <button
-              onClick={() => setShowDeletedPanel((v) => !v)}
-              className="w-full flex items-center justify-between px-2 py-1 text-[10px] uppercase tracking-wider text-gray-500 hover:text-gray-300"
-            >
-              <span>Removed ({deletedLabels.length})</span>
-              <span>{showDeletedPanel ? '−' : '+'}</span>
-            </button>
-            {showDeletedPanel && (
-              <div className="flex flex-col gap-0.5 mt-1">
-                {deletedLabels.map((d) => (
-                  <div
-                    key={d.type}
-                    className="flex items-center gap-2 px-2 py-1 rounded text-xs text-gray-500 hover:bg-gray-800"
-                  >
-                    <span className="flex-1 truncate">{d.label}</span>
-                    <button
-                      onClick={() => undeleteType(d.type)}
-                      title="Bring back into the palette"
-                      className="text-[10px] text-gray-400 hover:text-emerald-400"
-                    >
-                      Restore
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         <button
           onClick={() => setModalOpen(true)}
           className="mt-2 px-2 py-1.5 rounded border border-dashed border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500"
         >
           + Add custom equipment
         </button>
+
+        {deletedLabels.length > 0 && (
+          <button
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Restore ${deletedLabels.length} deleted built-in item${
+                    deletedLabels.length === 1 ? '' : 's'
+                  } back into the palette?`
+                )
+              ) {
+                deletedLabels.forEach((d) => undeleteType(d.type));
+              }
+            }}
+            title="Bring back every built-in equipment type you've deleted"
+            className="mt-1 px-2 py-0.5 text-[10px] text-gray-600 hover:text-emerald-400 text-left"
+          >
+            ⟲ Reset palette ({deletedLabels.length} deleted)
+          </button>
+        )}
       </div>
 
       <CustomEquipmentModal open={modalOpen} onClose={() => setModalOpen(false)} />
