@@ -64,18 +64,30 @@ export function ImportModal() {
   };
 
   const handleAnalyze = async () => {
-    if (!imageDataUrl) return;
+    if (!imageDataUrl) {
+      setError('Please upload an image first.');
+      return;
+    }
     if (!apiKey.trim()) {
       setError('Please enter your Anthropic API key.');
       return;
     }
     setStatus('analyzing');
     setError(null);
+    console.log('[import] starting Claude vision analysis...');
     try {
       const res = await analyzeFloorPlan(imageDataUrl, apiKey.trim());
+      console.log('[import] analysis complete:', res);
       setResult(res);
     } catch (err) {
-      setError((err as Error).message || 'Analysis failed.');
+      console.error('[import] analysis failed:', err);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+          ? err
+          : JSON.stringify(err);
+      setError(msg || 'Analysis failed with no error message.');
     }
   };
 
