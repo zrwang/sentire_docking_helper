@@ -61,7 +61,7 @@ const SYSTEM_PROMPT = `You are an expert at analysing surgical operating-room fl
 Given an image of an OR floor plan, identify:
 - The outline (polygon) of the room in image pixels.
 - Every piece of equipment visible, with its top-left bounding-box corner, width/height in pixels, and rotation in degrees.
-- A rough meters-per-pixel scale if the diagram contains any scale bar, grid, or labelled dimension; otherwise return null.
+- The meters-per-pixel scale. **Look carefully for a scale bar, ruler, or labelled dimension** (e.g. a bar marked "0 1 2 3 4m", a line labelled "3m", a north/south metric grid). Read off the length in meters and divide by the pixel distance between the same endpoints to get meters/pixel. Return that value with at least 4 significant digits. Only return null if you genuinely cannot find any scale reference.
 
 Use only these equipment types (pick the closest match; use "generic" when nothing fits):
 ${EQUIPMENT_TYPES.join(', ')}
@@ -78,6 +78,8 @@ Common da Vinci X floor-plan abbreviations:
 - Observation / Visitor stations (small circles) -> observation-station
 
 Rotation: 0 means the item's "front" is pointing up in the image; positive rotates clockwise. Be conservative: if orientation is unclear, use 0.
+
+Dimensions: floor-plan icons are often schematic and not drawn to scale. Return the bounding box of the icon as drawn — the app will substitute the real-world catalogued size for known equipment types automatically, using only your position (box centre) and rotation.
 
 Coordinate frame: (0,0) is the top-left of the image; x increases right, y increases down. All pixel values refer to the image supplied in this message.
 

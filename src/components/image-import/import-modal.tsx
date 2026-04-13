@@ -176,13 +176,25 @@ export function ImportModal() {
 
     const equipment: Equipment[] = result.equipment.map((e, idx) => {
       const catalog = EQUIPMENT_CATALOG.find((c) => c.type === e.type);
-      const dimensions = {
-        width: Math.max(5, e.dimensionsPx.width * scale),
-        height: Math.max(5, e.dimensionsPx.height * scale),
-      };
+
+      // Floor-plan diagrams are schematic — icon sizes on the page rarely
+      // match the equipment's real footprint. Prefer the catalog's known
+      // real-world dimensions for every typed item; only fall back to the
+      // AI's pixel measurement for 'generic' (unrecognised) items.
+      const aiW = Math.max(5, e.dimensionsPx.width * scale);
+      const aiH = Math.max(5, e.dimensionsPx.height * scale);
+      const dimensions =
+        catalog && catalog.type !== 'generic'
+          ? { ...catalog.dimensions }
+          : { width: aiW, height: aiH };
+
+      // Anchor on the CENTRE of the AI's detected box so the icon stays in
+      // the same visual spot even when its size changes to the catalog value.
+      const aiCenterX = (e.positionPx.x + e.dimensionsPx.width / 2) * scale;
+      const aiCenterY = (e.positionPx.y + e.dimensionsPx.height / 2) * scale;
       const position = {
-        x: e.positionPx.x * scale - offsetX,
-        y: e.positionPx.y * scale - offsetY,
+        x: aiCenterX - dimensions.width / 2 - offsetX,
+        y: aiCenterY - dimensions.height / 2 - offsetY,
       };
       return {
         id: uuidv4(),
