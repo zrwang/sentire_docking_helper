@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Stage, Layer } from 'react-konva';
+import { Stage, Layer, Rect } from 'react-konva';
 import type Konva from 'konva';
 import { useRoomStore } from '@/stores/room-store';
 import { useAppStore } from '@/stores/app-store';
 import { useCanvasZoom } from '@/hooks/use-canvas-zoom';
+import { MIN_ROOM_SIZE, MAX_ROOM_SIZE } from '@/constants/room-defaults';
+import { snapToGrid } from '@/utils/snap';
 import { RoomGrid } from './room-grid';
 import { RoomWalls } from './room-walls';
 import { EquipmentItem } from './equipment-item';
@@ -12,8 +14,8 @@ import { ContourEditor } from './contour-editor';
 
 export function RoomCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { room } = useRoomStore();
-  const { gridVisible, selectEquipment, contourEditMode } = useAppStore();
+  const { room, setRoomDimensions } = useRoomStore();
+  const { gridVisible, snapEnabled, selectEquipment, contourEditMode } = useAppStore();
   const { scale, position, stageRef, handleWheel, resetZoom } =
     useCanvasZoom(0.6);
 
@@ -68,6 +70,33 @@ export function RoomCanvas() {
     }
   };
 
+  // Drag handle on the room's bottom-right corner. Only shown for rectangular
+  // rooms -- polygon rooms are reshaped via the contour editor instead. The
+  // handle's local x/y give the new width/height directly since it lives on
+  // a layer in room-space.
+  const handleRoomResizeDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+    e.cancelBubble = true;
+    const node = e.target;
+    let w = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, node.x()));
+    let h = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, node.y()));
+    if (snapEnabled) {
+      w = snapToGrid(w, room.gridSize);
+      h = snapToGrid(h, room.gridSize);
+    }
+    setRoomDimensions(w, h);
+    node.x(w);
+    node.y(h);
+  };
+
+  const handleRoomResizeDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    e.cancelBubble = true;
+    e.target.x(room.width);
+    e.target.y(room.height);
+  };
+
+  const showRoomResizeHandle =
+    !contourEditMode && room.shape !== 'polygon';
+
   return (
     <div ref={containerRef} className="flex-1 bg-gray-950 overflow-hidden relative">
       <Stage
@@ -121,6 +150,35 @@ export function RoomCanvas() {
         {contourEditMode && (
           <Layer>
             <ContourEditor scale={scale} />
+          </Layer>
+        )}
+
+        {/* Room resize handle (rectangular rooms only) */}
+        {showRoomResizeHandle && (
+          <Layer>
+            <Rect
+              x={room.width}
+              y={room.height}
+              width={14 / scale}
+              height={14 / scale}
+              offsetX={7 / scale}
+              offsetY={7 / scale}
+              fill="#10B981"
+              stroke="white"
+              strokeWidth={1.5 / scale}
+              cornerRadius={2 / scale}
+              draggable
+              onDragMove={handleRoomResizeDragMove}
+              onDragEnd={handleRoomResizeDragEnd}
+              onMouseEnter={(e) => {
+                const stage = e.target.getStage();
+                if (stage) stage.container().style.cursor = 'nwse-resize';
+              }}
+              onMouseLeave={(e) => {
+                const stage = e.target.getStage();
+                if (stage) stage.container().style.cursor = '';
+              }}
+            />
           </Layer>
         )}
       </Stage>

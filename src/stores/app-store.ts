@@ -11,6 +11,13 @@ interface AppState {
   contourEditMode: boolean;
   /** Id of the equipment whose outline is being edited, or null. */
   itemContourEditId: string | null;
+  /**
+   * When true, width/height edits on the selected equipment (both via the
+   * properties panel and the on-canvas drag handle) stay locked to the
+   * item's current aspect ratio. Mirrors what holding Shift does during a
+   * drag, but persists across interactions.
+   */
+  aspectLocked: boolean;
 
   setActiveTab: (tab: TabId) => void;
   selectEquipment: (id: string | null) => void;
@@ -18,6 +25,8 @@ interface AppState {
   toggleGrid: () => void;
   setContourEditMode: (on: boolean) => void;
   setItemContourEditId: (id: string | null) => void;
+  toggleAspectLocked: () => void;
+  setAspectLocked: (on: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -27,6 +36,7 @@ export const useAppStore = create<AppState>((set) => ({
   gridVisible: true,
   contourEditMode: false,
   itemContourEditId: null,
+  aspectLocked: false,
 
   setActiveTab: (tab) => set({ activeTab: tab, selectedEquipmentId: null, contourEditMode: false, itemContourEditId: null }),
   selectEquipment: (id) => set({ selectedEquipmentId: id }),
@@ -39,4 +49,6 @@ export const useAppStore = create<AppState>((set) => ({
       itemContourEditId: on ? null : s.itemContourEditId,
     })),
   setItemContourEditId: (id) => set({ itemContourEditId: id }),
+  toggleAspectLocked: () => set((s) => ({ aspectLocked: !s.aspectLocked })),
+  setAspectLocked: (on) => set({ aspectLocked: on }),
 }));

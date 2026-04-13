@@ -24,6 +24,8 @@ export function EquipmentProperties({ itemId, onClose, embedded }: EquipmentProp
   const selectEquipment = useAppStore((s) => s.selectEquipment);
   const itemContourEditId = useAppStore((s) => s.itemContourEditId);
   const setItemContourEditId = useAppStore((s) => s.setItemContourEditId);
+  const aspectLocked = useAppStore((s) => s.aspectLocked);
+  const toggleAspectLocked = useAppStore((s) => s.toggleAspectLocked);
   const {
     room,
     moveEquipment,
@@ -69,6 +71,16 @@ export function EquipmentProperties({ itemId, onClose, embedded }: EquipmentProp
   const handleSizeChange = (axis: 'width' | 'height', value: string) => {
     const num = Number(value);
     if (isNaN(num) || num <= 0) return;
+    const { width, height } = item.dimensions;
+    if (aspectLocked && width > 0 && height > 0) {
+      const ratio = width / height;
+      const next =
+        axis === 'width'
+          ? { width: num, height: num / ratio }
+          : { width: num * ratio, height: num };
+      resizeEquipment(item.id, next);
+      return;
+    }
     resizeEquipment(item.id, { ...item.dimensions, [axis]: num });
   };
 
@@ -207,7 +219,22 @@ export function EquipmentProperties({ itemId, onClose, embedded }: EquipmentProp
       </div>
 
       {/* Size */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-gray-500">Size</span>
+        <label
+          title="Lock width/height ratio when resizing (equivalent to holding Shift while dragging the handle)"
+          className="flex items-center gap-1 text-[10px] text-gray-400 cursor-pointer select-none"
+        >
+          <input
+            type="checkbox"
+            checked={aspectLocked}
+            onChange={toggleAspectLocked}
+            className="accent-blue-500"
+          />
+          Lock aspect ratio
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-2 -mt-2">
         <div>
           <label className="block text-[10px] text-gray-500 mb-0.5">Width (cm)</label>
           <input

@@ -17,7 +17,7 @@ interface EquipmentItemProps {
 
 export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   const groupRef = useRef<Konva.Group>(null);
-  const { selectedEquipmentId, selectEquipment, snapEnabled, itemContourEditId } = useAppStore();
+  const { selectedEquipmentId, selectEquipment, snapEnabled, itemContourEditId, aspectLocked } = useAppStore();
   const isContourEditing = itemContourEditId === item.id;
   const { room, moveEquipment, rotateEquipment, removeEquipment, resizeEquipment } = useRoomStore();
   const openEquipmentMenu = useContextMenuStore((s) => s.openEquipmentMenu);
@@ -180,7 +180,7 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
     // both horizontal- and vertical-dominant drags feel responsive.
     const ratio = resizeStartRatioRef.current;
     const shiftHeld = (e.evt as MouseEvent | TouchEvent | undefined)?.shiftKey;
-    if (shiftHeld && ratio && ratio > 0) {
+    if ((shiftHeld || aspectLocked) && ratio && ratio > 0) {
       if (w / ratio > h) {
         h = w / ratio;
       } else {
