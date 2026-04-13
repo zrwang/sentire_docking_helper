@@ -260,9 +260,10 @@ export function EquipmentPalette() {
 
   const dragClasses = (dragProps: ReorderRowProps) => {
     const s = dragProps['data-drag-state'];
-    return `${s === 'source' ? 'opacity-40' : ''} ${
-      s === 'target' ? 'outline outline-1 outline-blue-500/60 bg-gray-800/60' : ''
-    }`;
+    if (s === 'source') return 'opacity-40';
+    if (s === 'target-above') return 'shadow-[inset_0_2px_0_0_#3b82f6]';
+    if (s === 'target-below') return 'shadow-[inset_0_-2px_0_0_#3b82f6]';
+    return '';
   };
 
   const renderEntry = (

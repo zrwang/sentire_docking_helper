@@ -117,17 +117,18 @@ export function RoomCanvas() {
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    // Only treat drags carrying our add-MIME as a valid target -- everything
-    // else (text, files, reorder payloads from the sidebar) should pass
-    // through. Browsers hide the MIME list during dragover for security, so
-    // check `types` instead of `getData`.
-    if (!e.dataTransfer.types.includes(PALETTE_ADD_MIME)) return;
+    // Always accept the drag so the drop event fires -- we validate the MIME
+    // in handleDrop. (Some browsers expose dataTransfer.types as a DOMStringList
+    // during dragover, which lacks `.includes`, so a MIME filter here is
+    // unreliable. A permissive dragover + strict drop check is the portable
+    // pattern.)
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     const type = e.dataTransfer.getData(PALETTE_ADD_MIME) as EquipmentType;
+    // Ignore drops that don't carry a palette payload (e.g. text drags).
     if (!type) return;
     e.preventDefault();
 

@@ -8,8 +8,13 @@ export interface ReorderRowProps {
   onDragOver: (e: DragEvent<HTMLElement>) => void;
   onDrop: (e: DragEvent<HTMLElement>) => void;
   onDragEnd: (e: DragEvent<HTMLElement>) => void;
-  /** Pass-through visual hint the caller can apply during drag. */
-  'data-drag-state'?: 'source' | 'target' | undefined;
+  /**
+   * Pass-through hint the caller can apply during drag:
+   *  - 'source'       -- this row is the one being dragged
+   *  - 'target-above' -- drop would insert *above* this row
+   *  - 'target-below' -- drop would insert *below* this row
+   */
+  'data-drag-state'?: 'source' | 'target-above' | 'target-below' | undefined;
 }
 
 interface Options {
@@ -50,7 +55,10 @@ export function useListReorder({ onReorder, mimeType }: Options) {
         } catch {
           /* ignore */
         }
-        e.dataTransfer.effectAllowed = 'move';
+        // Allow both 'move' (sibling reorder drops) and 'copy' (external drop
+        // targets such as the canvas) so every consumer can pick a matching
+        // dropEffect without the browser cancelling the drop.
+        e.dataTransfer.effectAllowed = 'copyMove';
       },
       onDragEnter: (e) => {
         if (startIndexRef.current === null) return;
@@ -73,8 +81,14 @@ export function useListReorder({ onReorder, mimeType }: Options) {
       'data-drag-state':
         dragIndex === index
           ? 'source'
-          : overIndex === index
-            ? 'target'
+          : overIndex === index && dragIndex !== null
+            ? // The result of the splice is "move toward overIndex"; when we
+              // drop onto a row we're traveling DOWN, the item lands *after*
+              // it, so the insertion line belongs at the bottom. Traveling
+              // UP, the item lands *before* the target -- line at the top.
+              dragIndex < index
+              ? 'target-below'
+              : 'target-above'
             : undefined,
     }),
     [MIME, dragIndex, overIndex, onReorder, reset]

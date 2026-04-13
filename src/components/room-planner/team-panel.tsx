@@ -105,9 +105,11 @@ function MemberRow({ member, dragProps, onEdit, onRemove }: MemberRowProps) {
       className={`flex items-start gap-2 px-2 py-1.5 rounded hover:bg-gray-800 group transition-opacity ${
         dragState === 'source' ? 'opacity-40' : ''
       } ${
-        dragState === 'target'
-          ? 'outline outline-1 outline-blue-500/60 bg-gray-800/60'
-          : ''
+        dragState === 'target-above'
+          ? 'shadow-[inset_0_2px_0_0_#3b82f6]'
+          : dragState === 'target-below'
+            ? 'shadow-[inset_0_-2px_0_0_#3b82f6]'
+            : ''
       }`}
     >
       <span
