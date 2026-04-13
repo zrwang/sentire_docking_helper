@@ -16,14 +16,15 @@ import { RoomWalls } from './room-walls';
 import { EquipmentItem } from './equipment-item';
 import { BackgroundImage } from './background-image';
 import { ContourEditor } from './contour-editor';
+import { CalibrationRuler } from './calibration-ruler';
 
 export function RoomCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { room, setRoomDimensions, addEquipmentAt, setBackgroundTransform } =
     useRoomStore();
-  const { gridVisible, snapEnabled, selectEquipment, contourEditMode, bgAdjustMode } =
+  const { gridVisible, snapEnabled, selectEquipment, contourEditMode, bgAdjustMode, setCanvasExporter } =
     useAppStore();
-  const { scale, position, stageRef, handleWheel, resetZoom } =
+  const { scale, position, stageRef, handleWheel, resetZoom, panByRoomDelta } =
     useCanvasZoom(0.6);
 
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
@@ -74,6 +75,23 @@ export function RoomCanvas() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [updateSize]);
+
+  // Expose a PNG/JPEG exporter through the app store so AppHeader (and other
+  // non-child components) can save the current canvas without needing a ref
+  // into this subtree.
+  useEffect(() => {
+    setCanvasExporter(({ mimeType, quality }) => {
+      const stage = stageRef.current;
+      if (!stage) return null;
+      return stage.toDataURL({
+        mimeType,
+        quality: quality ?? 0.92,
+        pixelRatio: 2,
+      });
+    });
+    return () => setCanvasExporter(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (e.target === e.target.getStage()) {
@@ -204,6 +222,8 @@ export function RoomCanvas() {
               onMove={(p) => setBackgroundTransform(p)}
               onResize={(s) => setBackgroundTransform(s)}
             />
+            {/* 1-metre reference ruler for calibrating picture scale */}
+            {bgAdjustMode && <CalibrationRuler scale={scale} />}
           </Layer>
         )}
 
@@ -227,7 +247,7 @@ export function RoomCanvas() {
         {/* Contour editor overlay */}
         {contourEditMode && (
           <Layer>
-            <ContourEditor scale={scale} />
+            <ContourEditor scale={scale} onNormalized={panByRoomDelta} />
           </Layer>
         )}
 

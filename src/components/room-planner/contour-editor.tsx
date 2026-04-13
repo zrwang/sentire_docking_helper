@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Circle, Line, Group } from 'react-konva';
 import type Konva from 'konva';
 import { useRoomStore } from '@/stores/room-store';
@@ -6,6 +7,11 @@ import { snapToGrid } from '@/utils/snap';
 
 interface ContourEditorProps {
   scale: number;
+  /**
+   * Called after `normalizeRoom` shifts the polygon/equipment in room-space,
+   * so the parent can counter-pan the stage and keep the view anchored.
+   */
+  onNormalized?: (dx: number, dy: number) => void;
 }
 
 /**
@@ -17,7 +23,7 @@ interface ContourEditorProps {
  *  - Remove a vertex by double-clicking it, right-clicking it, or
  *    Alt/Shift-clicking it (min 3 vertices).
  */
-export function ContourEditor({ scale }: ContourEditorProps) {
+export function ContourEditor({ scale, onNormalized }: ContourEditorProps) {
   const room = useRoomStore((s) => s.room);
   const snapEnabled = useAppStore((s) => s.snapEnabled);
   const {
@@ -26,6 +32,23 @@ export function ContourEditor({ scale }: ContourEditorProps) {
     removePolygonVertex,
     normalizeRoom,
   } = useRoomStore();
+
+  // Keep the latest normalize callback in a ref so the unmount cleanup always
+  // sees the current value without re-running on every render.
+  const onNormalizedRef = useRef(onNormalized);
+  onNormalizedRef.current = onNormalized;
+
+  // Finalize the contour when leaving edit mode: normalizing shifts the
+  // polygon to origin (0,0), and the compensating pan keeps the room visually
+  // anchored. AppHeader used to do this, but doing it in the editor's unmount
+  // keeps the shift + camera compensation paired in one place.
+  useEffect(() => {
+    return () => {
+      const { dx, dy } = normalizeRoom();
+      onNormalizedRef.current?.(dx, dy);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (room.shape !== 'polygon' || !room.polygon || room.polygon.length < 3) {
     return null;
@@ -48,7 +71,8 @@ export function ContourEditor({ scale }: ContourEditorProps) {
     };
 
   const handleVertexDragEnd = () => {
-    normalizeRoom();
+    const { dx, dy } = normalizeRoom();
+    onNormalized?.(dx, dy);
   };
 
   const removeVertex =

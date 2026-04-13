@@ -2,6 +2,17 @@ import { create } from 'zustand';
 
 export type TabId = 'room' | 'robot' | 'ports';
 
+/**
+ * Returns a data URL snapshot of the canvas, or null if the canvas isn't
+ * ready. Lives as a callback in the store so non-child components
+ * (e.g. AppHeader's Export button) can trigger exports without having to
+ * plumb a stage ref through the tree.
+ */
+export type CanvasExporter = (opts: {
+  mimeType: 'image/png' | 'image/jpeg';
+  quality?: number;
+}) => string | null;
+
 interface AppState {
   activeTab: TabId;
   selectedEquipmentId: string | null;
@@ -20,6 +31,11 @@ interface AppState {
   aspectLocked: boolean;
   /** When true, the canvas exposes drag/resize handles for the background image. */
   bgAdjustMode: boolean;
+  /**
+   * Registered by RoomCanvas on mount; lets any component (AppHeader) ask the
+   * stage to produce a PNG/JPEG snapshot.
+   */
+  canvasExporter: CanvasExporter | null;
 
   setActiveTab: (tab: TabId) => void;
   selectEquipment: (id: string | null) => void;
@@ -30,6 +46,7 @@ interface AppState {
   toggleAspectLocked: () => void;
   setAspectLocked: (on: boolean) => void;
   setBgAdjustMode: (on: boolean) => void;
+  setCanvasExporter: (fn: CanvasExporter | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -41,6 +58,7 @@ export const useAppStore = create<AppState>((set) => ({
   itemContourEditId: null,
   aspectLocked: false,
   bgAdjustMode: false,
+  canvasExporter: null,
 
   setActiveTab: (tab) => set({ activeTab: tab, selectedEquipmentId: null, contourEditMode: false, itemContourEditId: null, bgAdjustMode: false }),
   selectEquipment: (id) => set({ selectedEquipmentId: id }),
@@ -62,4 +80,5 @@ export const useAppStore = create<AppState>((set) => ({
       // from fighting with equipment selection handles.
       selectedEquipmentId: on ? null : s.selectedEquipmentId,
     })),
+  setCanvasExporter: (fn) => set({ canvasExporter: fn }),
 }));

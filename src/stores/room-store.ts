@@ -54,8 +54,12 @@ interface RoomState {
   removePolygonVertex: (index: number) => void;
   /** Convert the current rectangular room into a 4-vertex polygon. */
   convertRectToPolygon: () => void;
-  /** Recompute bbox, shift polygon + equipment so the room starts at (0,0). */
-  normalizeRoom: () => void;
+  /**
+   * Recompute bbox, shift polygon + equipment so the room starts at (0,0).
+   * Returns the room-space delta that was applied, so callers can compensate
+   * the canvas camera and keep things visually anchored.
+   */
+  normalizeRoom: () => { dx: number; dy: number };
   setBackgroundImage: (dataUrl: string | undefined, opacity?: number) => void;
   setBackgroundOpacity: (opacity: number) => void;
   /**
@@ -433,12 +437,16 @@ export const useRoomStore = create<RoomState>((set) => ({
       return { room: { ...state.room, shape: 'polygon', polygon } };
     }),
 
-  normalizeRoom: () =>
+  normalizeRoom: () => {
+    let appliedDx = 0;
+    let appliedDy = 0;
     set((state) => {
       if (state.room.shape !== 'polygon' || !state.room.polygon) return state;
       const bbox = polygonBoundingBox(state.room.polygon);
       const dx = -bbox.minX;
       const dy = -bbox.minY;
+      appliedDx = dx;
+      appliedDy = dy;
       const polygon = state.room.polygon.map((p) => ({ x: p.x + dx, y: p.y + dy }));
       const equipment = state.room.equipment.map((e) => ({
         ...e,
@@ -453,7 +461,9 @@ export const useRoomStore = create<RoomState>((set) => ({
           height: bbox.maxY - bbox.minY,
         },
       };
-    }),
+    });
+    return { dx: appliedDx, dy: appliedDy };
+  },
 
   setBackgroundImage: (dataUrl, opacity = 0.35) =>
     set((state) => ({

@@ -70,6 +70,23 @@ export function useCanvasZoom(initialScale = 0.6) {
     []
   );
 
+  /**
+   * Compensate the stage pan so that a room-space shift of (dxRoom, dyRoom)
+   * does NOT cause visual motion on the canvas. Used when normalizing the
+   * polygon: vertices/equipment shift by (dx,dy) in room coords, and we
+   * counter-shift the camera in pixel space by (-dx*scale, -dy*scale).
+   */
+  const panByRoomDelta = useCallback((dxRoom: number, dyRoom: number) => {
+    if (!dxRoom && !dyRoom) return;
+    setState((prev) => ({
+      scale: prev.scale,
+      position: {
+        x: prev.position.x - dxRoom * prev.scale,
+        y: prev.position.y - dyRoom * prev.scale,
+      },
+    }));
+  }, []);
+
   const resetZoom = useCallback((containerWidth: number, containerHeight: number, roomWidth: number, roomHeight: number) => {
     const padding = 60;
     const scaleX = (containerWidth - padding * 2) / roomWidth;
@@ -91,5 +108,6 @@ export function useCanvasZoom(initialScale = 0.6) {
     handleWheel,
     handleDragEnd,
     resetZoom,
+    panByRoomDelta,
   };
 }

@@ -7,8 +7,8 @@ import { createPartialNephrectomyPreset } from '@/constants/preset-layouts';
 import { LayoutsMenu } from './layouts-menu';
 
 export function AppHeader() {
-  const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode, bgAdjustMode, setBgAdjustMode } = useAppStore();
-  const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage, setBackgroundTransform, replaceRoom, convertRectToPolygon, normalizeRoom } = useRoomStore();
+  const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode, bgAdjustMode, setBgAdjustMode, canvasExporter } = useAppStore();
+  const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage, setBackgroundTransform, replaceRoom, convertRectToPolygon } = useRoomStore();
   const openImport = useImportStore((s) => s.openImport);
   const demoName = useLayoutsStore((s) => s.demoName);
   const demoLayout = useLayoutsStore((s) =>
@@ -23,7 +23,8 @@ export function AppHeader() {
       }
       setContourEditMode(true);
     } else {
-      normalizeRoom();
+      // ContourEditor.unmount normalizes + pans the camera; we just flip the
+      // mode off here.
       setContourEditMode(false);
     }
   };
@@ -43,6 +44,28 @@ export function AppHeader() {
     }
     selectEquipment(null);
     replaceRoom(pinned ? pinned.room : createPartialNephrectomyPreset());
+  };
+
+  const handleExport = (format: 'png' | 'jpeg') => {
+    if (!canvasExporter) return;
+    // Briefly deselect + turn off edit modes so the snapshot is clean (no
+    // selection rings, no corner resize handles, no adjust overlay).
+    selectEquipment(null);
+    if (contourEditMode) setContourEditMode(false);
+    if (bgAdjustMode) setBgAdjustMode(false);
+    // Defer one frame so React + Konva have committed the hidden-handle state.
+    requestAnimationFrame(() => {
+      const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
+      const dataUrl = canvasExporter({ mimeType, quality: 0.92 });
+      if (!dataUrl) return;
+      const link = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      link.download = `room-layout-${stamp}.${format === 'png' ? 'png' : 'jpg'}`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
   };
 
   const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,6 +170,23 @@ export function AppHeader() {
         >
           Import Plan
         </button>
+
+        <div className="flex items-center">
+          <button
+            onClick={() => handleExport('png')}
+            title="Download the current canvas as a PNG file"
+            className="px-2.5 py-1 text-xs font-medium bg-slate-600 hover:bg-slate-500 rounded-l"
+          >
+            Export PNG
+          </button>
+          <button
+            onClick={() => handleExport('jpeg')}
+            title="Download the current canvas as a JPG file"
+            className="px-2 py-1 text-xs font-medium bg-slate-600 hover:bg-slate-500 rounded-r border-l border-slate-700"
+          >
+            JPG
+          </button>
+        </div>
 
         <button
           onClick={handleLoadDemo}
