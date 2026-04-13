@@ -319,7 +319,9 @@ export function ImportModal() {
             <button
               onClick={handleAnalyze}
               disabled={!imageDataUrl || !apiKey || isAnalyzing}
-              className="px-4 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:text-blue-100 disabled:cursor-wait rounded inline-flex items-center gap-2"
+              className={`px-4 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:text-blue-100 rounded inline-flex items-center gap-2 ${
+                isAnalyzing ? 'cursor-wait' : 'disabled:cursor-not-allowed'
+              }`}
             >
               {isAnalyzing && (
                 <Spinner />
