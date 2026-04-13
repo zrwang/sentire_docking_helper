@@ -265,13 +265,34 @@ export function ImportModal() {
             <button
               onClick={handleAnalyze}
               disabled={!imageDataUrl || !apiKey || status === 'analyzing'}
-              className="px-4 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 rounded"
+              className="px-4 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:text-blue-200 disabled:cursor-wait rounded inline-flex items-center gap-2"
             >
-              {status === 'analyzing' ? 'Analyzing with Claude...' : 'Analyze with AI'}
+              {status === 'analyzing' && (
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+              )}
+              {status === 'analyzing' ? 'Analyzing...' : 'Analyze with AI'}
             </button>
             {status === 'analyzing' && (
-              <span className="text-xs text-gray-400 animate-pulse">
-                This can take 20-60 seconds.
+              <span className="text-xs text-gray-400">
+                Sending image to Claude — usually 20-60s.
               </span>
             )}
           </section>
