@@ -1,6 +1,29 @@
 import { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { v4 as uuidv4 } from 'uuid';
+
+/** Inline-styled spinner so it's resilient to CSS class purging / HMR issues. */
+function Spinner({ size = 16 }: { size?: number }) {
+  return (
+    <>
+      <style>{`@keyframes sr-spin { to { transform: rotate(360deg); } }`}</style>
+      <span
+        aria-hidden="true"
+        style={{
+          display: 'inline-block',
+          width: size,
+          height: size,
+          border: '2px solid currentColor',
+          borderTopColor: 'transparent',
+          borderRadius: '9999px',
+          animation: 'sr-spin 0.8s linear infinite',
+          verticalAlign: '-2px',
+          boxSizing: 'border-box',
+        }}
+      />
+    </>
+  );
+}
 import { useImportStore } from '@/stores/import-store';
 import { useRoomStore } from '@/stores/room-store';
 import { analyzeFloorPlan } from '@/utils/claude-vision';
@@ -280,7 +303,7 @@ export function ImportModal() {
               className="px-4 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:text-blue-100 disabled:cursor-wait rounded inline-flex items-center gap-2"
             >
               {status === 'analyzing' && (
-                <span className="sr-spinner" aria-hidden="true" />
+                <Spinner />
               )}
               {status === 'analyzing' ? 'Analyzing...' : 'Analyze with AI'}
             </button>
@@ -293,7 +316,7 @@ export function ImportModal() {
 
           {status === 'analyzing' && (
             <div className="flex items-center gap-3 px-3 py-2 bg-blue-900/40 border border-blue-700 rounded text-xs text-blue-200">
-              <span className="sr-spinner" aria-hidden="true" />
+              <Spinner />
               <span>
                 Claude is analyzing your floor plan. This call is synchronous;
                 please keep this tab open.
