@@ -7,7 +7,7 @@ import { createPartialNephrectomyPreset } from '@/constants/preset-layouts';
 import { LayoutsMenu } from './layouts-menu';
 
 export function AppHeader() {
-  const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode, bgAdjustMode, setBgAdjustMode, canvasExporter } = useAppStore();
+  const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode, bgAdjustMode, setBgAdjustMode, bgCalibrationMode, setBgCalibrationMode, canvasExporter } = useAppStore();
   const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage, setBackgroundTransform, replaceRoom, convertRectToPolygon } = useRoomStore();
   const openImport = useImportStore((s) => s.openImport);
   const demoName = useLayoutsStore((s) => s.demoName);
@@ -136,6 +136,17 @@ export function AppHeader() {
               }`}
             >
               {bgAdjustMode ? 'Done' : 'Adjust'}
+            </button>
+            <button
+              onClick={() => setBgCalibrationMode(!bgCalibrationMode)}
+              title="Rescale the picture by clicking two points that are 1 m apart in the real world"
+              className={`px-2 py-0.5 text-xs rounded ${
+                bgCalibrationMode
+                  ? 'bg-amber-500 text-black hover:bg-amber-400'
+                  : 'bg-gray-700 hover:bg-gray-600'
+              }`}
+            >
+              {bgCalibrationMode ? 'Cancel' : 'Calibrate (1 m)'}
             </button>
             <button
               onClick={() => {

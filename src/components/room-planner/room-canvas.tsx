@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Stage, Layer, Rect } from 'react-konva';
+import { Stage, Layer, Rect, Circle, Line } from 'react-konva';
 import type Konva from 'konva';
 import { useRoomStore } from '@/stores/room-store';
 import { useAppStore } from '@/stores/app-store';
@@ -10,24 +10,28 @@ import { PALETTE_ADD_MIME } from '@/constants/palette-dnd';
 import { EQUIPMENT_CATALOG } from '@/constants/room-defaults';
 import { useCustomEquipmentStore } from '@/stores/custom-equipment-store';
 import { getTypeOverride } from '@/stores/type-overrides-store';
-import type { EquipmentType } from '@/types/room';
+import type { EquipmentType, Position } from '@/types/room';
 import { RoomGrid } from './room-grid';
 import { RoomWalls } from './room-walls';
 import { EquipmentItem } from './equipment-item';
 import { BackgroundImage } from './background-image';
 import { ContourEditor } from './contour-editor';
-import { CalibrationRuler } from './calibration-ruler';
 
 export function RoomCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { room, setRoomDimensions, addEquipmentAt, setBackgroundTransform } =
     useRoomStore();
-  const { gridVisible, snapEnabled, selectEquipment, contourEditMode, bgAdjustMode, setCanvasExporter } =
+  const { gridVisible, snapEnabled, selectEquipment, contourEditMode, bgAdjustMode, bgCalibrationMode, setBgCalibrationMode, setCanvasExporter } =
     useAppStore();
   const { scale, position, stageRef, handleWheel, resetZoom, panByRoomDelta } =
     useCanvasZoom(0.6);
 
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
+
+  // Two-click reference-line workflow for rescaling the background picture:
+  // first click lands here, the second click commits the scale.
+  const [calibrationStart, setCalibrationStart] = useState<Position | null>(null);
+  const [calibrationHover, setCalibrationHover] = useState<Position | null>(null);
 
   const updateSize = useCallback(() => {
     if (containerRef.current) {
@@ -53,12 +57,23 @@ export function RoomCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When room dimensions change dramatically (e.g. after import), refit view.
-  // Skipped while editing the contour, because vertex drags update the polygon
-  // bbox (room.width/height) continuously and we don't want the camera to jump
-  // on every frame.
+  // When room dimensions change dramatically (e.g. after import), refit the
+  // view. We skip refits while the contour is being edited (so vertex drags
+  // don't yank the camera around) AND we skip the first refit right after
+  // exiting edit mode -- the ContourEditor's unmount pan already kept the
+  // room visually anchored, and a refit here would slide it back to center.
+  const wasInContourEditRef = useRef(false);
   useEffect(() => {
-    if (contourEditMode) return;
+    if (contourEditMode) {
+      wasInContourEditRef.current = true;
+      return;
+    }
+    if (wasInContourEditRef.current) {
+      // Just transitioned out of edit mode. Clear the flag and leave the
+      // camera where the compensation put it.
+      wasInContourEditRef.current = false;
+      return;
+    }
     if (containerRef.current) {
       resetZoom(
         containerRef.current.offsetWidth,
@@ -93,11 +108,77 @@ export function RoomCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Convert the current pointer position to room-space (stage-local) coords.
+  const pointerInRoom = (): Position | null => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return null;
+    return stage.getAbsoluteTransform().copy().invert().point(pointer);
+  };
+
+  /**
+   * Apply the user-drawn reference line: the distance between the two clicks
+   * is treated as exactly 100 cm, and the background picture is scaled by
+   * the corresponding factor (aspect-preserving). The scale pivots on the
+   * midpoint of the drawn line so the feature the user measured stays put.
+   */
+  const applyCalibrationScale = (a: Position, b: Position) => {
+    const lengthCm = Math.hypot(b.x - a.x, b.y - a.y);
+    if (lengthCm < 1) return; // ignore accidental near-zero lines
+    const k = 100 / lengthCm;
+    const curW = room.backgroundWidth ?? room.width;
+    const curH = room.backgroundHeight ?? room.height;
+    const curX = room.backgroundX ?? 0;
+    const curY = room.backgroundY ?? 0;
+    const midX = (a.x + b.x) / 2;
+    const midY = (a.y + b.y) / 2;
+    setBackgroundTransform({
+      x: midX - (midX - curX) * k,
+      y: midY - (midY - curY) * k,
+      width: curW * k,
+      height: curH * k,
+    });
+  };
+
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    if (bgCalibrationMode) {
+      const pt = pointerInRoom();
+      if (!pt) return;
+      if (!calibrationStart) {
+        setCalibrationStart(pt);
+      } else {
+        applyCalibrationScale(calibrationStart, pt);
+        setCalibrationStart(null);
+        setCalibrationHover(null);
+        setBgCalibrationMode(false);
+      }
+      return;
+    }
     if (e.target === e.target.getStage()) {
       selectEquipment(null);
     }
   };
+
+  const handleStageMouseMove = () => {
+    if (!bgCalibrationMode || !calibrationStart) return;
+    const pt = pointerInRoom();
+    if (pt) setCalibrationHover(pt);
+  };
+
+  // Exit calibration cleanly if the user presses Escape.
+  useEffect(() => {
+    if (!bgCalibrationMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setBgCalibrationMode(false);
+        setCalibrationStart(null);
+        setCalibrationHover(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [bgCalibrationMode, setBgCalibrationMode]);
 
   // Drag handle on the room's bottom-right corner. Only shown for rectangular
   // rooms -- polygon rooms are reshaped via the contour editor instead. The
@@ -182,13 +263,35 @@ export function RoomCanvas() {
     addEquipmentAt(type, position);
   };
 
+  const cancelCalibration = () => {
+    setBgCalibrationMode(false);
+    setCalibrationStart(null);
+    setCalibrationHover(null);
+  };
+
   return (
     <div
       ref={containerRef}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       className="flex-1 bg-gray-950 overflow-hidden relative"
+      style={bgCalibrationMode ? { cursor: 'crosshair' } : undefined}
     >
+      {bgCalibrationMode && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-amber-500 text-black px-3 py-1.5 rounded shadow text-xs font-medium flex items-center gap-3">
+          <span>
+            {calibrationStart
+              ? 'Click the second point — the distance between your clicks will be set to 1 m.'
+              : 'Click the first point of a known 1 m feature on your picture.'}
+          </span>
+          <button
+            onClick={cancelCalibration}
+            className="text-[11px] underline hover:text-amber-900"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
       <Stage
         ref={stageRef}
         width={containerSize.width}
@@ -197,10 +300,13 @@ export function RoomCanvas() {
         scaleY={scale}
         x={position.x}
         y={position.y}
-        draggable
+        // While the user is placing the two reference clicks, disable stage
+        // panning so a drag doesn't hijack the second click.
+        draggable={!bgCalibrationMode}
         onWheel={handleWheel}
         onClick={handleStageClick}
         onTap={handleStageClick}
+        onMouseMove={handleStageMouseMove}
       >
         {/* Room floor + walls */}
         <Layer listening={false}>
@@ -222,8 +328,42 @@ export function RoomCanvas() {
               onMove={(p) => setBackgroundTransform(p)}
               onResize={(s) => setBackgroundTransform(s)}
             />
-            {/* 1-metre reference ruler for calibrating picture scale */}
-            {bgAdjustMode && <CalibrationRuler scale={scale} />}
+          </Layer>
+        )}
+
+        {/* Scale-calibration overlay: first-click marker + rubber-band line */}
+        {bgCalibrationMode && calibrationStart && (
+          <Layer listening={false}>
+            <Circle
+              x={calibrationStart.x}
+              y={calibrationStart.y}
+              radius={6 / scale}
+              fill="#FBBF24"
+              stroke="white"
+              strokeWidth={1.5 / scale}
+            />
+            {calibrationHover && (
+              <>
+                <Line
+                  points={[
+                    calibrationStart.x,
+                    calibrationStart.y,
+                    calibrationHover.x,
+                    calibrationHover.y,
+                  ]}
+                  stroke="#FBBF24"
+                  strokeWidth={2 / scale}
+                  dash={[8 / scale, 4 / scale]}
+                />
+                <Circle
+                  x={calibrationHover.x}
+                  y={calibrationHover.y}
+                  radius={5 / scale}
+                  fill="#FBBF24"
+                  opacity={0.6}
+                />
+              </>
+            )}
           </Layer>
         )}
 

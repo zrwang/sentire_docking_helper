@@ -32,6 +32,12 @@ interface AppState {
   /** When true, the canvas exposes drag/resize handles for the background image. */
   bgAdjustMode: boolean;
   /**
+   * When true, the next two clicks on the canvas define a "1 metre" reference
+   * line; the background picture is then rescaled so that line is exactly
+   * 100 cm long in room-space.
+   */
+  bgCalibrationMode: boolean;
+  /**
    * Registered by RoomCanvas on mount; lets any component (AppHeader) ask the
    * stage to produce a PNG/JPEG snapshot.
    */
@@ -46,6 +52,7 @@ interface AppState {
   toggleAspectLocked: () => void;
   setAspectLocked: (on: boolean) => void;
   setBgAdjustMode: (on: boolean) => void;
+  setBgCalibrationMode: (on: boolean) => void;
   setCanvasExporter: (fn: CanvasExporter | null) => void;
 }
 
@@ -58,9 +65,10 @@ export const useAppStore = create<AppState>((set) => ({
   itemContourEditId: null,
   aspectLocked: false,
   bgAdjustMode: false,
+  bgCalibrationMode: false,
   canvasExporter: null,
 
-  setActiveTab: (tab) => set({ activeTab: tab, selectedEquipmentId: null, contourEditMode: false, itemContourEditId: null, bgAdjustMode: false }),
+  setActiveTab: (tab) => set({ activeTab: tab, selectedEquipmentId: null, contourEditMode: false, itemContourEditId: null, bgAdjustMode: false, bgCalibrationMode: false }),
   selectEquipment: (id) => set({ selectedEquipmentId: id }),
   toggleSnap: () => set((s) => ({ snapEnabled: !s.snapEnabled })),
   toggleGrid: () => set((s) => ({ gridVisible: !s.gridVisible })),
@@ -79,6 +87,15 @@ export const useAppStore = create<AppState>((set) => ({
       // Deselecting while entering adjust mode keeps clicks on the canvas
       // from fighting with equipment selection handles.
       selectedEquipmentId: on ? null : s.selectedEquipmentId,
+      // The two modes are mutually exclusive -- calibration hijacks stage
+      // clicks, which would interfere with the adjust handles.
+      bgCalibrationMode: on ? false : s.bgCalibrationMode,
+    })),
+  setBgCalibrationMode: (on) =>
+    set((s) => ({
+      bgCalibrationMode: on,
+      selectedEquipmentId: on ? null : s.selectedEquipmentId,
+      bgAdjustMode: on ? false : s.bgAdjustMode,
     })),
   setCanvasExporter: (fn) => set({ canvasExporter: fn }),
 }));

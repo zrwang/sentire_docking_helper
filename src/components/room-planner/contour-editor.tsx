@@ -70,10 +70,12 @@ export function ContourEditor({ scale, onNormalized }: ContourEditorProps) {
       updatePolygonVertex(idx, { x, y });
     };
 
-  const handleVertexDragEnd = () => {
-    const { dx, dy } = normalizeRoom();
-    onNormalized?.(dx, dy);
-  };
+  // During a vertex drag we deliberately do NOT normalize: if we did, every
+  // dragEnd could shift the polygon's origin and visibly nudge the room up
+  // or left, forcing the camera to catch up. Instead we let the polygon sit
+  // at whatever coordinates the user has dragged it to, and defer the
+  // one-time re-anchor to unmount (above), where we also pan the stage to
+  // compensate.
 
   const removeVertex =
     (idx: number) =>
@@ -143,7 +145,6 @@ export function ContourEditor({ scale, onNormalized }: ContourEditorProps) {
           strokeWidth={1.5 / scale}
           draggable
           onDragMove={handleVertexDrag(i)}
-          onDragEnd={handleVertexDragEnd}
           onClick={handleVertexClick(i)}
           onTap={handleVertexClick(i)}
           onDblClick={removeVertex(i)}
