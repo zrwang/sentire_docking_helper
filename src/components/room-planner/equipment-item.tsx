@@ -101,7 +101,15 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
     rotateEquipment(item.id, (item.rotation + 90) % 360);
   };
 
+  const handleRotationDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
+    // Prevent the parent Group's drag handlers from firing -- otherwise
+    // handleDragEnd would misinterpret the handle's local coords and snap
+    // the item to the room's upper-left corner.
+    e.cancelBubble = true;
+  };
+
   const handleRotationDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+    e.cancelBubble = true;
     const layer = e.target.getLayer();
     if (!layer) return;
     const pointer = layer.getRelativePointerPosition();
@@ -119,6 +127,7 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   };
 
   const handleRotationDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    e.cancelBubble = true;
     e.target.x(hw);
     e.target.y(-handleOffset);
   };
@@ -281,6 +290,7 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
               e.cancelBubble = true;
               handleSelectOnInteract();
             }}
+            onDragStart={handleRotationDragStart}
             onDragMove={handleRotationDragMove}
             onDragEnd={handleRotationDragEnd}
             onMouseEnter={(e) => {
