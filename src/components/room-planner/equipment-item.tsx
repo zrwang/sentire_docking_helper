@@ -16,7 +16,7 @@ interface EquipmentItemProps {
 export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   const groupRef = useRef<Konva.Group>(null);
   const { selectedEquipmentId, selectEquipment, snapEnabled } = useAppStore();
-  const { room, moveEquipment, rotateEquipment } = useRoomStore();
+  const { room, moveEquipment, rotateEquipment, removeEquipment } = useRoomStore();
   const iconDataUrl = useIconStore((s) => s.icons[item.type]);
   const [iconImage, setIconImage] = useState<HTMLImageElement | null>(null);
   const [isOverlapping, setIsOverlapping] = useState(false);
@@ -78,6 +78,21 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
     selectEquipment(item.id);
   };
 
+  // Any interaction (mousedown / touchstart / drag start) also selects, so
+  // selection works even if Konva suppresses the click due to micro-movement.
+  const handleSelectOnInteract = () => {
+    if (selectedEquipmentId !== item.id) {
+      selectEquipment(item.id);
+    }
+  };
+
+  const handleRemove = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    // Prevent the click from also bubbling to the Group/Stage
+    e.cancelBubble = true;
+    removeEquipment(item.id);
+    if (selectedEquipmentId === item.id) selectEquipment(null);
+  };
+
   const handleDblClick = () => {
     rotateEquipment(item.id, item.rotation + 90);
   };
@@ -100,8 +115,11 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
       offsetY={hh}
       rotation={item.rotation}
       draggable={!item.isLocked}
+      onDragStart={handleSelectOnInteract}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
+      onMouseDown={handleSelectOnInteract}
+      onTouchStart={handleSelectOnInteract}
       onClick={handleClick}
       onTap={handleClick}
       onDblClick={handleDblClick}
@@ -209,6 +227,36 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
           fill="#FCD34D"
           listening={false}
         />
+      )}
+
+      {/* In-canvas delete badge shown on the selected item */}
+      {isSelected && !item.isLocked && (
+        <Group
+          x={item.dimensions.width}
+          y={0}
+          onClick={handleRemove}
+          onTap={handleRemove}
+        >
+          <Circle
+            radius={9 / scale}
+            fill="#EF4444"
+            stroke="white"
+            strokeWidth={1 / scale}
+          />
+          <Text
+            x={-9 / scale}
+            y={-9 / scale}
+            width={18 / scale}
+            height={18 / scale}
+            text="×"
+            fontSize={14 / scale}
+            fontStyle="bold"
+            fill="white"
+            align="center"
+            verticalAlign="middle"
+            listening={false}
+          />
+        </Group>
       )}
     </Group>
   );
