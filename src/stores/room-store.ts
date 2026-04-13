@@ -23,6 +23,16 @@ interface RoomState {
   toggleLock: (id: string) => void;
   setRoomDimensions: (width: number, height: number) => void;
   setRoomPolygon: (polygon: Position[] | null) => void;
+  /** Replace a single vertex during contour editing (no normalization). */
+  updatePolygonVertex: (index: number, position: Position) => void;
+  /** Insert a new vertex at `index` (shifts subsequent vertices). */
+  insertPolygonVertex: (index: number, position: Position) => void;
+  /** Remove vertex at `index`. No-op if fewer than 4 vertices remain. */
+  removePolygonVertex: (index: number) => void;
+  /** Convert the current rectangular room into a 4-vertex polygon. */
+  convertRectToPolygon: () => void;
+  /** Recompute bbox, shift polygon + equipment so the room starts at (0,0). */
+  normalizeRoom: () => void;
   setBackgroundImage: (dataUrl: string | undefined, opacity?: number) => void;
   setBackgroundOpacity: (opacity: number) => void;
   replaceRoom: (room: Room) => void;
@@ -148,6 +158,75 @@ export const useRoomStore = create<RoomState>((set) => ({
           ...state.room,
           shape: 'polygon',
           polygon: normalized,
+          width: bbox.maxX - bbox.minX,
+          height: bbox.maxY - bbox.minY,
+        },
+      };
+    }),
+
+  updatePolygonVertex: (index, position) =>
+    set((state) => {
+      if (state.room.shape !== 'polygon' || !state.room.polygon) return state;
+      const polygon = state.room.polygon.map((p, i) => (i === index ? position : p));
+      const bbox = polygonBoundingBox(polygon);
+      return {
+        room: {
+          ...state.room,
+          polygon,
+          // Keep bbox in sync so the view and grid stay usable mid-drag. We
+          // intentionally do NOT shift vertices/equipment here -- that would
+          // cause the vertex to "run away" from the user's cursor during drag.
+          width: Math.max(bbox.maxX, 1) - Math.min(bbox.minX, 0),
+          height: Math.max(bbox.maxY, 1) - Math.min(bbox.minY, 0),
+        },
+      };
+    }),
+
+  insertPolygonVertex: (index, position) =>
+    set((state) => {
+      if (state.room.shape !== 'polygon' || !state.room.polygon) return state;
+      const polygon = [...state.room.polygon];
+      polygon.splice(index, 0, position);
+      return { room: { ...state.room, polygon } };
+    }),
+
+  removePolygonVertex: (index) =>
+    set((state) => {
+      if (state.room.shape !== 'polygon' || !state.room.polygon) return state;
+      if (state.room.polygon.length <= 3) return state;
+      const polygon = state.room.polygon.filter((_, i) => i !== index);
+      return { room: { ...state.room, polygon } };
+    }),
+
+  convertRectToPolygon: () =>
+    set((state) => {
+      if (state.room.shape === 'polygon' && state.room.polygon) return state;
+      const { width, height } = state.room;
+      const polygon: Position[] = [
+        { x: 0, y: 0 },
+        { x: width, y: 0 },
+        { x: width, y: height },
+        { x: 0, y: height },
+      ];
+      return { room: { ...state.room, shape: 'polygon', polygon } };
+    }),
+
+  normalizeRoom: () =>
+    set((state) => {
+      if (state.room.shape !== 'polygon' || !state.room.polygon) return state;
+      const bbox = polygonBoundingBox(state.room.polygon);
+      const dx = -bbox.minX;
+      const dy = -bbox.minY;
+      const polygon = state.room.polygon.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+      const equipment = state.room.equipment.map((e) => ({
+        ...e,
+        position: { x: e.position.x + dx, y: e.position.y + dy },
+      }));
+      return {
+        room: {
+          ...state.room,
+          polygon,
+          equipment,
           width: bbox.maxX - bbox.minX,
           height: bbox.maxY - bbox.minY,
         },

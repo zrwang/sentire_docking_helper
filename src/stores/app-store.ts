@@ -7,11 +7,14 @@ interface AppState {
   selectedEquipmentId: string | null;
   snapEnabled: boolean;
   gridVisible: boolean;
+  /** When true, the canvas shows draggable vertex handles for editing the OR contour. */
+  contourEditMode: boolean;
 
   setActiveTab: (tab: TabId) => void;
   selectEquipment: (id: string | null) => void;
   toggleSnap: () => void;
   toggleGrid: () => void;
+  setContourEditMode: (on: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -19,9 +22,15 @@ export const useAppStore = create<AppState>((set) => ({
   selectedEquipmentId: null,
   snapEnabled: true,
   gridVisible: true,
+  contourEditMode: false,
 
-  setActiveTab: (tab) => set({ activeTab: tab, selectedEquipmentId: null }),
+  setActiveTab: (tab) => set({ activeTab: tab, selectedEquipmentId: null, contourEditMode: false }),
   selectEquipment: (id) => set({ selectedEquipmentId: id }),
   toggleSnap: () => set((s) => ({ snapEnabled: !s.snapEnabled })),
   toggleGrid: () => set((s) => ({ gridVisible: !s.gridVisible })),
+  setContourEditMode: (on) =>
+    set((s) => ({
+      contourEditMode: on,
+      selectedEquipmentId: on ? null : s.selectedEquipmentId,
+    })),
 }));

@@ -8,11 +8,12 @@ import { RoomGrid } from './room-grid';
 import { RoomWalls } from './room-walls';
 import { EquipmentItem } from './equipment-item';
 import { BackgroundImage } from './background-image';
+import { ContourEditor } from './contour-editor';
 
 export function RoomCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { room } = useRoomStore();
-  const { gridVisible, selectEquipment } = useAppStore();
+  const { gridVisible, selectEquipment, contourEditMode } = useAppStore();
   const { scale, position, stageRef, handleWheel, resetZoom } =
     useCanvasZoom(0.6);
 
@@ -115,6 +116,13 @@ export function RoomCanvas() {
             <EquipmentItem key={item.id} item={item} scale={scale} />
           ))}
         </Layer>
+
+        {/* Contour editor overlay */}
+        {contourEditMode && (
+          <Layer>
+            <ContourEditor scale={scale} />
+          </Layer>
+        )}
       </Stage>
     </div>
   );

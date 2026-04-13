@@ -5,9 +5,22 @@ import { MIN_ROOM_SIZE, MAX_ROOM_SIZE } from '@/constants/room-defaults';
 import { createPartialNephrectomyPreset } from '@/constants/preset-layouts';
 
 export function AppHeader() {
-  const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment } = useAppStore();
-  const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage, replaceRoom } = useRoomStore();
+  const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode } = useAppStore();
+  const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage, replaceRoom, convertRectToPolygon, normalizeRoom } = useRoomStore();
   const openImport = useImportStore((s) => s.openImport);
+
+  const handleToggleContourEdit = () => {
+    if (!contourEditMode) {
+      // Entering edit mode -- make sure we have a polygon to edit.
+      if (room.shape !== 'polygon' || !room.polygon) {
+        convertRectToPolygon();
+      }
+      setContourEditMode(true);
+    } else {
+      normalizeRoom();
+      setContourEditMode(false);
+    }
+  };
 
   const handleLoadDemo = () => {
     if (
@@ -99,6 +112,18 @@ export function AppHeader() {
           className="px-2.5 py-1 text-xs font-medium bg-teal-700 hover:bg-teal-600 rounded"
         >
           Load Demo
+        </button>
+
+        <button
+          onClick={handleToggleContourEdit}
+          title="Reshape the OR walls: drag a vertex, click an edge midpoint to add one, Alt+click a vertex to delete"
+          className={`px-2.5 py-1 text-xs font-medium rounded ${
+            contourEditMode
+              ? 'bg-amber-500 text-black hover:bg-amber-400'
+              : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+        >
+          {contourEditMode ? 'Done Editing' : 'Edit Contour'}
         </button>
 
         <div className="flex items-center gap-1">
