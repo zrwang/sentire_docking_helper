@@ -149,15 +149,19 @@ export const EQUIPMENT_CATALOG: EquipmentCatalogEntry[] = [
     color: '#9CA3AF',
     shape: 'circle',
   },
-
-  // --- Catch-all ---
-  {
-    type: 'generic',
-    label: 'Custom Item',
-    dimensions: { width: 60, height: 60 },
-    color: '#71717A',
-  },
 ];
+
+/**
+ * Fallback entry used when code needs a default catalog (e.g. AI import
+ * returning an unknown type). Not shown in the palette; users create custom
+ * equipment via the "+ Add custom equipment" button instead.
+ */
+export const GENERIC_CATALOG_ENTRY: EquipmentCatalogEntry = {
+  type: 'generic',
+  label: 'Custom Item',
+  dimensions: { width: 60, height: 60 },
+  color: '#71717A',
+};
 
 export const DEFAULT_ROOM: Room = {
   shape: 'rectangular',
