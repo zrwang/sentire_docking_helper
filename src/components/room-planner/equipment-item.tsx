@@ -146,14 +146,38 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
     openEquipmentMenu(item.id, native?.clientX ?? 0, native?.clientY ?? 0);
   };
 
+  // Aspect ratio captured when a resize drag starts, so shift+drag can lock
+  // to the item's original proportions for the duration of that gesture.
+  const resizeStartRatioRef = useRef<number | null>(null);
+
+  const handleResizeDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
+    e.cancelBubble = true;
+    const { width, height } = item.dimensions;
+    resizeStartRatioRef.current = height > 0 ? width / height : 1;
+  };
+
   const handleResizeDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     // The handle is a child of the Group (rotated local coord space). Using
     // the handle's local x/y gives us the desired width/height directly --
     // no need to unwind rotation ourselves.
     e.cancelBubble = true;
     const node = e.target;
-    const w = Math.max(10, node.x());
-    const h = Math.max(10, node.y());
+    let w = Math.max(10, node.x());
+    let h = Math.max(10, node.y());
+
+    // Shift held -> constrain to the captured starting aspect ratio. We pick
+    // whichever axis the user is dragging harder relative to that ratio, so
+    // both horizontal- and vertical-dominant drags feel responsive.
+    const ratio = resizeStartRatioRef.current;
+    const shiftHeld = (e.evt as MouseEvent | TouchEvent | undefined)?.shiftKey;
+    if (shiftHeld && ratio && ratio > 0) {
+      if (w / ratio > h) {
+        h = w / ratio;
+      } else {
+        w = h * ratio;
+      }
+    }
+
     resizeEquipment(item.id, { width: w, height: h });
     // Pin the handle to the new bottom-right corner each frame.
     node.x(w);
@@ -162,6 +186,7 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
 
   const handleResizeDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
+    resizeStartRatioRef.current = null;
     e.target.x(item.dimensions.width);
     e.target.y(item.dimensions.height);
   };
@@ -374,6 +399,7 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
             e.cancelBubble = true;
             handleSelectOnInteract();
           }}
+          onDragStart={handleResizeDragStart}
           onDragMove={handleResizeDragMove}
           onDragEnd={handleResizeDragEnd}
           onMouseEnter={(e) => {
