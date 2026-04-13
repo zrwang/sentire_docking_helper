@@ -2,6 +2,7 @@ import { AppHeader } from '@/components/layout/app-header';
 import { TabNavigation } from '@/components/layout/tab-navigation';
 import { SidePanel } from '@/components/layout/side-panel';
 import { EquipmentPalette } from '@/components/room-planner/equipment-palette';
+import { TeamPanel } from '@/components/room-planner/team-panel';
 import { RoomCanvas } from '@/components/room-planner/room-canvas';
 import { ContextMenuHost } from '@/components/room-planner/context-menu-host';
 import { ImportModal } from '@/components/image-import/import-modal';
@@ -13,6 +14,7 @@ function RoomTab() {
     <div className="flex flex-1 overflow-hidden">
       <SidePanel>
         <EquipmentPalette />
+        <TeamPanel />
       </SidePanel>
       <RoomCanvas />
     </div>

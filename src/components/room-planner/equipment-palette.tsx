@@ -72,6 +72,9 @@ export function EquipmentPalette() {
     }
     removeCustomEntry(type);
     clearIcon(type);
+    // Drop any dangling "hidden" entry so the store doesn't keep referencing
+    // a type that no longer exists.
+    unhideType(type);
   };
 
   // Entries shown as plain rows: skip legacy-hidden types, user-hidden types,
@@ -90,17 +93,29 @@ export function EquipmentPalette() {
     (c) => !hiddenSet.has(c.type as string)
   );
 
-  // Names for the "hidden" restore list (includes custom entries too).
-  const hiddenLabels: { type: EquipmentType; label: string }[] = hiddenTypes
+  // Names for the "hidden" restore list (includes custom entries too). Custom
+  // entries get a Delete action so the user can fully remove them after they
+  // hide them -- built-ins can only be restored since they live in code.
+  const hiddenLabels: {
+    type: EquipmentType;
+    label: string;
+    isCustom: boolean;
+  }[] = hiddenTypes
     .map((t) => {
       const built = EQUIPMENT_CATALOG.find((e) => e.type === t);
       const custom = customEntries.find((e) => e.type === t);
       const entry = built ?? custom;
-      return entry
-        ? { type: entry.type as EquipmentType, label: entry.label }
-        : null;
+      if (!entry) return null;
+      return {
+        type: entry.type as EquipmentType,
+        label: entry.label,
+        isCustom: !!custom && !built,
+      };
     })
-    .filter((x): x is { type: EquipmentType; label: string } => x !== null);
+    .filter(
+      (x): x is { type: EquipmentType; label: string; isCustom: boolean } =>
+        x !== null
+    );
 
   const handleHide = (e: React.MouseEvent, type: EquipmentType) => {
     e.stopPropagation();
@@ -251,6 +266,15 @@ export function EquipmentPalette() {
                     >
                       Restore
                     </button>
+                    {h.isCustom && (
+                      <button
+                        onClick={() => handleRemoveCustom(h.type, h.label)}
+                        title="Permanently delete this custom equipment"
+                        className="text-[10px] text-gray-400 hover:text-red-400"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 ))}
                 {hiddenLabels.length > 1 && (
