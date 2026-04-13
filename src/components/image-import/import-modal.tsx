@@ -73,6 +73,11 @@ export function ImportModal() {
   const { replaceRoom } = useRoomStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showKey, setShowKey] = useState(false);
+  // Local mirror of the analyzing state so the spinner paints immediately
+  // under flushSync — Zustand updates go through an external subscription
+  // and can't be forced to commit the same way.
+  const [isAnalyzingLocal, setIsAnalyzingLocal] = useState(false);
+  const isAnalyzing = isAnalyzingLocal || status === 'analyzing';
 
   if (!isOpen) return null;
 
@@ -96,13 +101,13 @@ export function ImportModal() {
       setError('Please enter your Anthropic API key.');
       return;
     }
-    // Force the analyzing state to paint BEFORE any work that might throw
-    // synchronously (parseDataUrl, `new Anthropic(...)`, etc). Without
-    // flushSync a fast synchronous error would skip the spinner entirely.
+    // Flip local state synchronously + flushSync so React paints the
+    // spinner before we start any blocking work.
     flushSync(() => {
-      setStatus('analyzing');
-      setError(null);
+      setIsAnalyzingLocal(true);
     });
+    setStatus('analyzing');
+    setError(null);
     console.log('[import] starting Claude vision analysis...');
     const started = performance.now();
     try {
@@ -123,6 +128,8 @@ export function ImportModal() {
           ? err
           : JSON.stringify(err);
       setError(msg || 'Analysis failed with no error message.');
+    } finally {
+      setIsAnalyzingLocal(false);
     }
   };
 
@@ -299,22 +306,22 @@ export function ImportModal() {
           <section className="flex items-center gap-3">
             <button
               onClick={handleAnalyze}
-              disabled={!imageDataUrl || !apiKey || status === 'analyzing'}
+              disabled={!imageDataUrl || !apiKey || isAnalyzing}
               className="px-4 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:text-blue-100 disabled:cursor-wait rounded inline-flex items-center gap-2"
             >
-              {status === 'analyzing' && (
+              {isAnalyzing && (
                 <Spinner />
               )}
-              {status === 'analyzing' ? 'Analyzing...' : 'Analyze with AI'}
+              {isAnalyzing ? 'Analyzing...' : 'Analyze with AI'}
             </button>
-            {status === 'analyzing' && (
+            {isAnalyzing && (
               <span className="text-xs text-gray-400">
                 Sending image to Claude — usually 20-60s.
               </span>
             )}
           </section>
 
-          {status === 'analyzing' && (
+          {isAnalyzing && (
             <div className="flex items-center gap-3 px-3 py-2 bg-blue-900/40 border border-blue-700 rounded text-xs text-blue-200">
               <Spinner />
               <span>
