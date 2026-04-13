@@ -177,6 +177,7 @@ export function EquipmentProperties() {
           </button>
           <button
             onClick={handleDelete}
+            title="Delete (or press Delete / Backspace)"
             className="flex-1 px-2 py-1.5 rounded text-xs font-medium bg-red-900/30 text-red-400 border border-red-800/40 hover:bg-red-900/50 transition-colors"
           >
             Delete

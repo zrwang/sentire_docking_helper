@@ -6,6 +6,7 @@ import { EquipmentProperties } from '@/components/room-planner/equipment-propert
 import { RoomCanvas } from '@/components/room-planner/room-canvas';
 import { ImportModal } from '@/components/image-import/import-modal';
 import { useAppStore } from '@/stores/app-store';
+import { useDeleteShortcut } from '@/hooks/use-delete-shortcut';
 
 function RoomTab() {
   return (
@@ -32,6 +33,7 @@ function PlaceholderTab({ title }: { title: string }) {
 
 export default function App() {
   const activeTab = useAppStore((s) => s.activeTab);
+  useDeleteShortcut();
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white">
