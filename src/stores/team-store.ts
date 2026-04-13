@@ -50,6 +50,8 @@ interface TeamState {
   addMember: (spec: Omit<TeamMember, 'id'>) => void;
   updateMember: (id: string, patch: Partial<Omit<TeamMember, 'id'>>) => void;
   removeMember: (id: string) => void;
+  /** Move a member from one index to another (for drag-to-reorder). */
+  moveMember: (fromIndex: number, toIndex: number) => void;
   clearAll: () => void;
 }
 
@@ -73,6 +75,23 @@ export const useTeamStore = create<TeamState>((set) => ({
   removeMember: (id) =>
     set((state) => {
       const next = state.members.filter((m) => m.id !== id);
+      persist(next);
+      return { members: next };
+    }),
+  moveMember: (fromIndex, toIndex) =>
+    set((state) => {
+      if (
+        fromIndex === toIndex ||
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= state.members.length ||
+        toIndex >= state.members.length
+      ) {
+        return state;
+      }
+      const next = [...state.members];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
       persist(next);
       return { members: next };
     }),

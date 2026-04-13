@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { SidePanelSection } from '@/components/layout/side-panel';
+import { useListReorder, type ReorderRowProps } from '@/hooks/use-list-reorder';
 import {
   useTeamStore,
   DEFAULT_TEAM_ROLES,
@@ -19,9 +20,15 @@ export function TeamPanel() {
   const addMember = useTeamStore((s) => s.addMember);
   const updateMember = useTeamStore((s) => s.updateMember);
   const removeMember = useTeamStore((s) => s.removeMember);
+  const moveMember = useTeamStore((s) => s.moveMember);
 
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const { getRowProps } = useListReorder({
+    onReorder: moveMember,
+    mimeType: 'application/x-sentire-team-reorder',
+  });
 
   return (
     <SidePanelSection title="Surgical Team" storageKey="team">
@@ -32,7 +39,7 @@ export function TeamPanel() {
           </p>
         )}
 
-        {members.map((m) =>
+        {members.map((m, index) =>
           editingId === m.id ? (
             <MemberForm
               key={m.id}
@@ -47,6 +54,7 @@ export function TeamPanel() {
             <MemberRow
               key={m.id}
               member={m}
+              dragProps={getRowProps(index)}
               onEdit={() => setEditingId(m.id)}
               onRemove={() => {
                 if (
@@ -84,13 +92,31 @@ export function TeamPanel() {
 
 interface MemberRowProps {
   member: TeamMember;
+  dragProps: ReorderRowProps;
   onEdit: () => void;
   onRemove: () => void;
 }
 
-function MemberRow({ member, onEdit, onRemove }: MemberRowProps) {
+function MemberRow({ member, dragProps, onEdit, onRemove }: MemberRowProps) {
+  const dragState = dragProps['data-drag-state'];
   return (
-    <div className="flex items-start gap-2 px-2 py-1.5 rounded hover:bg-gray-800 group">
+    <div
+      {...dragProps}
+      className={`flex items-start gap-2 px-2 py-1.5 rounded hover:bg-gray-800 group transition-opacity ${
+        dragState === 'source' ? 'opacity-40' : ''
+      } ${
+        dragState === 'target'
+          ? 'outline outline-1 outline-blue-500/60 bg-gray-800/60'
+          : ''
+      }`}
+    >
+      <span
+        className="text-gray-600 group-hover:text-gray-400 text-xs leading-none cursor-grab select-none shrink-0 pt-0.5"
+        title="Drag to reorder"
+        aria-hidden="true"
+      >
+        ⋮⋮
+      </span>
       <button
         onClick={onEdit}
         className="flex-1 min-w-0 text-left"

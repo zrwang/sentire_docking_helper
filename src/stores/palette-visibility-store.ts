@@ -3,6 +3,7 @@ import type { EquipmentType } from '@/types/room';
 
 const STORAGE_KEY = 'sentire.hiddenPaletteTypes.v1';
 const DELETED_KEY = 'sentire.deletedPaletteTypes.v1';
+const ORDER_KEY = 'sentire.paletteOrder.v1';
 
 function load(key: string): string[] {
   try {
@@ -40,12 +41,25 @@ interface PaletteVisibilityState {
   /** Move a type out of deleted entirely (back to fully visible). */
   undelete: (type: EquipmentType) => void;
   restoreAll: () => void;
+  /**
+   * User-defined display order. Entries listed here render in the given
+   * sequence; unlisted types fall back to their catalog order. A special
+   * sentinel `__psr-picker__` represents the grouped Patient Side Robot
+   * picker so it can be moved with the rest of the list.
+   */
+  order: string[];
+  /** Replace the order array (used after a drag-to-reorder drop). */
+  setOrder: (order: string[]) => void;
 }
+
+/** Sentinel token for the grouped PSR picker in the order array. */
+export const PSR_PICKER_TOKEN = '__psr-picker__';
 
 export const usePaletteVisibilityStore = create<PaletteVisibilityState>(
   (set, get) => ({
     hidden: load(STORAGE_KEY),
     deleted: load(DELETED_KEY),
+    order: load(ORDER_KEY),
     isHidden: (type) => get().hidden.includes(type as string),
     isDeleted: (type) => get().deleted.includes(type as string),
     hide: (type) =>
@@ -85,6 +99,10 @@ export const usePaletteVisibilityStore = create<PaletteVisibilityState>(
       persist(STORAGE_KEY, []);
       persist(DELETED_KEY, []);
       set({ hidden: [], deleted: [] });
+    },
+    setOrder: (order) => {
+      persist(ORDER_KEY, order);
+      set({ order });
     },
   })
 );
