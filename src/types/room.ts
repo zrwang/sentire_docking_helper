@@ -31,7 +31,11 @@ export type EquipmentType =
   | 'swab-rack'
   | 'medical-fridge'
   | 'observation-station'
-  | 'generic';
+  | 'generic'
+  // User-defined custom entries use a `custom:<uuid>` string. Keeping the
+  // literal union plus `(string & {})` preserves autocomplete for known
+  // values while allowing arbitrary custom ids.
+  | (string & {});
 
 export interface EquipmentCatalogEntry {
   type: EquipmentType;

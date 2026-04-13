@@ -1,8 +1,16 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import type { Equipment, EquipmentType, Position, Room } from '@/types/room';
+import type { Equipment, EquipmentCatalogEntry, EquipmentType, Position, Room } from '@/types/room';
 import { DEFAULT_ROOM, EQUIPMENT_CATALOG } from '@/constants/room-defaults';
+import { findCustomEntry } from '@/stores/custom-equipment-store';
 import { polygonBoundingBox } from '@/utils/geometry';
+
+/** Find an entry in the built-in catalog or user-defined custom catalog. */
+function findEntry(type: EquipmentType): EquipmentCatalogEntry | undefined {
+  return (
+    EQUIPMENT_CATALOG.find((e) => e.type === type) ?? findCustomEntry(type)
+  );
+}
 
 interface RoomState {
   room: Room;
@@ -26,7 +34,7 @@ export const useRoomStore = create<RoomState>((set) => ({
 
   addEquipment: (type) =>
     set((state) => {
-      const catalog = EQUIPMENT_CATALOG.find((e) => e.type === type);
+      const catalog = findEntry(type);
       if (!catalog) return state;
 
       const newItem: Equipment = {
@@ -55,7 +63,7 @@ export const useRoomStore = create<RoomState>((set) => ({
 
   addEquipmentAt: (type, position, rotation = 0, label) =>
     set((state) => {
-      const catalog = EQUIPMENT_CATALOG.find((e) => e.type === type);
+      const catalog = findEntry(type);
       if (!catalog) return state;
 
       const newItem: Equipment = {
