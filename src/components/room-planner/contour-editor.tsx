@@ -14,7 +14,8 @@ interface ContourEditorProps {
  *
  *  - Drag a vertex to reshape the room. Snap-to-grid applies when enabled.
  *  - Click a midpoint handle to insert a new vertex there.
- *  - Alt-click (or Shift-click) a vertex to delete it (min 3 vertices).
+ *  - Remove a vertex by double-clicking it, right-clicking it, or
+ *    Alt/Shift-clicking it (min 3 vertices).
  */
 export function ContourEditor({ scale }: ContourEditorProps) {
   const room = useRoomStore((s) => s.room);
@@ -50,14 +51,21 @@ export function ContourEditor({ scale }: ContourEditorProps) {
     normalizeRoom();
   };
 
+  const removeVertex =
+    (idx: number) =>
+    (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+      e.cancelBubble = true;
+      e.evt?.preventDefault?.();
+      removePolygonVertex(idx);
+      normalizeRoom();
+    };
+
   const handleVertexClick =
     (idx: number) =>
     (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
       const evt = e.evt as MouseEvent;
       if (evt.altKey || evt.shiftKey) {
-        e.cancelBubble = true;
-        removePolygonVertex(idx);
-        normalizeRoom();
+        removeVertex(idx)(e);
       }
     };
 
@@ -114,6 +122,9 @@ export function ContourEditor({ scale }: ContourEditorProps) {
           onDragEnd={handleVertexDragEnd}
           onClick={handleVertexClick(i)}
           onTap={handleVertexClick(i)}
+          onDblClick={removeVertex(i)}
+          onDblTap={removeVertex(i)}
+          onContextMenu={removeVertex(i)}
           onMouseEnter={(e) => {
             const stage = e.target.getStage();
             if (stage) stage.container().style.cursor = 'grab';

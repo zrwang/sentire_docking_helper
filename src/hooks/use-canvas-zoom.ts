@@ -3,7 +3,11 @@ import type Konva from 'konva';
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 3;
-const ZOOM_FACTOR = 1.1;
+// Per-unit-of-wheel-delta zoom factor. A standard mouse wheel tick is
+// deltaY ≈ 100 (⇒ ~14% per tick); trackpads fire small deltas many times
+// per gesture (⇒ smooth, subtle zoom). Tuned down from a flat 1.1x to avoid
+// "one scroll jumps two levels" on touchpads.
+const ZOOM_PER_DELTA = 0.0015;
 
 interface CanvasZoomState {
   scale: number;
@@ -28,10 +32,13 @@ export function useCanvasZoom(initialScale = 0.6) {
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
 
-      const direction = e.evt.deltaY < 0 ? 1 : -1;
+      // Delta-aware exponential zoom: a single mouse tick (deltaY≈100) gives a
+      // ~16% zoom; trackpad deltas (often 1-10 per event) give small, smooth
+      // steps. Negative deltaY means zoom in.
+      const factor = Math.exp(-e.evt.deltaY * ZOOM_PER_DELTA);
       const newScale = Math.min(
         MAX_SCALE,
-        Math.max(MIN_SCALE, direction > 0 ? oldScale * ZOOM_FACTOR : oldScale / ZOOM_FACTOR)
+        Math.max(MIN_SCALE, oldScale * factor)
       );
 
       // Zoom toward pointer position

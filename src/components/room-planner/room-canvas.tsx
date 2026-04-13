@@ -52,8 +52,12 @@ export function RoomCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When room dimensions change dramatically (e.g. after import), refit view
+  // When room dimensions change dramatically (e.g. after import), refit view.
+  // Skipped while editing the contour, because vertex drags update the polygon
+  // bbox (room.width/height) continuously and we don't want the camera to jump
+  // on every frame.
   useEffect(() => {
+    if (contourEditMode) return;
     if (containerRef.current) {
       resetZoom(
         containerRef.current.offsetWidth,
@@ -63,7 +67,7 @@ export function RoomCanvas() {
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room.width, room.height, room.shape]);
+  }, [room.width, room.height, room.shape, contourEditMode]);
 
   useEffect(() => {
     const handleResize = () => updateSize();

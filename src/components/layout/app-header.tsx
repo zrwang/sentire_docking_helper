@@ -169,7 +169,7 @@ export function AppHeader() {
 
         <button
           onClick={handleToggleContourEdit}
-          title="Reshape the OR walls: drag a vertex, click an edge midpoint to add one, Alt+click a vertex to delete"
+          title="Reshape the OR walls: drag a vertex, click an edge midpoint to add one, double-click (or right-click / Alt+click) a vertex to delete"
           className={`px-2.5 py-1 text-xs font-medium rounded ${
             contourEditMode
               ? 'bg-amber-500 text-black hover:bg-amber-400'
