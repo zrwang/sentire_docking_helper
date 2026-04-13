@@ -265,28 +265,10 @@ export function ImportModal() {
             <button
               onClick={handleAnalyze}
               disabled={!imageDataUrl || !apiKey || status === 'analyzing'}
-              className="px-4 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:text-blue-200 disabled:cursor-wait rounded inline-flex items-center gap-2"
+              className="px-4 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:text-blue-100 disabled:cursor-wait rounded inline-flex items-center gap-2"
             >
               {status === 'analyzing' && (
-                <svg
-                  className="animate-spin h-4 w-4 text-white"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  />
-                </svg>
+                <span className="sr-spinner" aria-hidden="true" />
               )}
               {status === 'analyzing' ? 'Analyzing...' : 'Analyze with AI'}
             </button>
