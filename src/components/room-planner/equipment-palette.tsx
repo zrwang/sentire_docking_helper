@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { EQUIPMENT_CATALOG, HIDDEN_PALETTE_TYPES } from '@/constants/room-defaults';
 import { PSR_CONFIGS, PSR_CONFIG_TYPES } from '@/constants/psr-configs';
+import { useRoomStore } from '@/stores/room-store';
 import { useCustomEquipmentStore } from '@/stores/custom-equipment-store';
 import { useIconStore } from '@/stores/icon-store';
 import { useContextMenuStore } from '@/stores/context-menu-store';
@@ -17,6 +18,7 @@ import { CustomEquipmentModal } from './custom-equipment-modal';
 const PSR_TYPE_SET = new Set<string>(PSR_CONFIG_TYPES);
 
 export function EquipmentPalette() {
+  const addEquipment = useRoomStore((s) => s.addEquipment);
   const customEntries = useCustomEquipmentStore((s) => s.entries);
   const removeCustomEntry = useCustomEquipmentStore((s) => s.removeEntry);
   const icons = useIconStore((s) => s.icons);
@@ -283,9 +285,10 @@ export function EquipmentPalette() {
         ⋮⋮
       </span>
       <div
+        onDoubleClick={() => addEquipment(entry.type)}
         onContextMenu={(e) => handleContextMenu(e, entry.type)}
-        title="Drag onto the canvas to add. Right-click to edit defaults."
-        className="flex items-center gap-2 flex-1 min-w-0 text-left text-sm text-gray-300 cursor-grab"
+        title="Drag onto the canvas, or double-click, to add. Right-click to edit defaults."
+        className="flex items-center gap-2 flex-1 min-w-0 text-left text-sm text-gray-300 cursor-grab select-none"
       >
         {renderSwatch(entry.type, entry.color)}
         <div className="flex flex-col min-w-0">
@@ -333,9 +336,10 @@ export function EquipmentPalette() {
                 <div
                   draggable
                   onDragStart={(e) => handleAddDragStart(e, cfg.type)}
+                  onDoubleClick={() => addEquipment(cfg.type)}
                   onContextMenu={(e) => handleContextMenu(e, cfg.type)}
-                  title={`${cfg.description} Drag onto the canvas to add; right-click to edit defaults.`}
-                  className="flex flex-col items-center gap-1 w-full px-1 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 cursor-grab"
+                  title={`${cfg.description} Drag onto the canvas, or double-click, to add; right-click to edit defaults.`}
+                  className="flex flex-col items-center gap-1 w-full px-1 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 cursor-grab select-none"
                 >
                   {icon ? (
                     <img src={icon} alt="" className="w-6 h-6 object-contain" draggable={false} />
@@ -403,9 +407,10 @@ export function EquipmentPalette() {
                     ⋮⋮
                   </span>
                   <div
+                    onDoubleClick={() => addEquipment(entry.type)}
                     onContextMenu={(e) => handleContextMenu(e, entry.type)}
-                    title="Drag onto the canvas to add. Right-click to edit defaults."
-                    className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-grab"
+                    title="Drag onto the canvas, or double-click, to add. Right-click to edit defaults."
+                    className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-grab select-none"
                   >
                     {renderSwatch(entry.type, entry.color)}
                     <div className="flex flex-col min-w-0">
