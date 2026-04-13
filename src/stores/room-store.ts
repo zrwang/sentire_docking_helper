@@ -3,6 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Equipment, EquipmentCatalogEntry, EquipmentType, Position, Room } from '@/types/room';
 import { DEFAULT_ROOM, EQUIPMENT_CATALOG } from '@/constants/room-defaults';
 import { findCustomEntry } from '@/stores/custom-equipment-store';
+import {
+  getTypeOverride,
+  useTypeOverridesStore,
+} from '@/stores/type-overrides-store';
 import { polygonBoundingBox } from '@/utils/geometry';
 
 /** Find an entry in the built-in catalog or user-defined custom catalog. */
@@ -59,20 +63,29 @@ export const useRoomStore = create<RoomState>((set) => ({
       const catalog = findEntry(type);
       if (!catalog) return state;
 
+      // Apply any persisted per-type overrides so a newly-added item matches
+      // the user's customized template (dimensions + polygon outline).
+      const override = getTypeOverride(catalog.type);
+      const dimensions = override?.dimensions
+        ? { ...override.dimensions }
+        : { ...catalog.dimensions };
+      const polygon = override?.polygon ? override.polygon.map((p) => ({ ...p })) : undefined;
+
       const newItem: Equipment = {
         id: uuidv4(),
         type: catalog.type,
         label: catalog.label,
         position: {
-          x: state.room.width / 2 - catalog.dimensions.width / 2,
-          y: state.room.height / 2 - catalog.dimensions.height / 2,
+          x: state.room.width / 2 - dimensions.width / 2,
+          y: state.room.height / 2 - dimensions.height / 2,
         },
         rotation: 0,
-        dimensions: { ...catalog.dimensions },
+        dimensions,
         isLocked: false,
         color: catalog.color,
         zIndex: state.room.equipment.length,
         shape: catalog.shape,
+        polygon,
       };
 
       return {
@@ -88,17 +101,24 @@ export const useRoomStore = create<RoomState>((set) => ({
       const catalog = findEntry(type);
       if (!catalog) return state;
 
+      const override = getTypeOverride(catalog.type);
+      const dimensions = override?.dimensions
+        ? { ...override.dimensions }
+        : { ...catalog.dimensions };
+      const polygon = override?.polygon ? override.polygon.map((p) => ({ ...p })) : undefined;
+
       const newItem: Equipment = {
         id: uuidv4(),
         type: catalog.type,
         label: label ?? catalog.label,
         position,
         rotation,
-        dimensions: { ...catalog.dimensions },
+        dimensions,
         isLocked: false,
         color: catalog.color,
         zIndex: state.room.equipment.length,
         shape: catalog.shape,
+        polygon,
       };
 
       return {
@@ -144,6 +164,8 @@ export const useRoomStore = create<RoomState>((set) => ({
       const w = Math.max(5, dimensions.width);
       const h = Math.max(5, dimensions.height);
       const type = target.type;
+      // Persist the new size as the type template so future inserts match.
+      useTypeOverridesStore.getState().setDimensions(type, { width: w, height: h });
       // Sync across all items of the same type so they stay consistent.
       return {
         room: {
@@ -168,6 +190,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       if (!target) return state;
       const poly = polygon && polygon.length >= 3 ? polygon : undefined;
       const type = target.type;
+      useTypeOverridesStore.getState().setPolygon(type, poly);
       return {
         room: {
           ...state.room,
@@ -184,6 +207,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       if (!target || !target.polygon) return state;
       const nextPoly = target.polygon.map((p, i) => (i === index ? pos : p));
       const type = target.type;
+      useTypeOverridesStore.getState().setPolygon(type, nextPoly);
       return {
         room: {
           ...state.room,
@@ -201,6 +225,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       const nextPoly = [...target.polygon];
       nextPoly.splice(index, 0, pos);
       const type = target.type;
+      useTypeOverridesStore.getState().setPolygon(type, nextPoly);
       return {
         room: {
           ...state.room,
@@ -217,6 +242,7 @@ export const useRoomStore = create<RoomState>((set) => ({
       if (!target || !target.polygon || target.polygon.length <= 3) return state;
       const nextPoly = target.polygon.filter((_, i) => i !== index);
       const type = target.type;
+      useTypeOverridesStore.getState().setPolygon(type, nextPoly);
       return {
         room: {
           ...state.room,
@@ -239,6 +265,8 @@ export const useRoomStore = create<RoomState>((set) => ({
         { x: width, y: height },
         { x: 0, y: height },
       ];
+      const polyToStore = target.polygon ?? defaultPoly;
+      useTypeOverridesStore.getState().setPolygon(type, polyToStore);
       return {
         room: {
           ...state.room,
