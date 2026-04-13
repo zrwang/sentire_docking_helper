@@ -82,9 +82,33 @@ export function EquipmentProperties() {
     if (!file || !item) return;
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setIcon(item.type, reader.result);
-      }
+      const dataUrl = reader.result;
+      if (typeof dataUrl !== 'string') return;
+      setIcon(item.type, dataUrl);
+
+      // Preserve the icon's aspect ratio by adjusting the item's dimensions.
+      // Keep the current larger side fixed so the item doesn't jump in size;
+      // resize the other side to match the icon's ratio. resizeEquipment
+      // already propagates to every item sharing this type.
+      const img = new Image();
+      img.onload = () => {
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+        if (!iw || !ih) return;
+        const ratio = iw / ih;
+        const { width: curW, height: curH } = item.dimensions;
+        let newW: number;
+        let newH: number;
+        if (curW >= curH) {
+          newW = curW;
+          newH = curW / ratio;
+        } else {
+          newH = curH;
+          newW = curH * ratio;
+        }
+        resizeEquipment(item.id, { width: newW, height: newH });
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
     // allow re-selecting the same file later

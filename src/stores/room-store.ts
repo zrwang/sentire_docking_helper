@@ -138,93 +138,119 @@ export const useRoomStore = create<RoomState>((set) => ({
     })),
 
   resizeEquipment: (id, dimensions) =>
-    set((state) => ({
-      room: {
-        ...state.room,
-        equipment: state.room.equipment.map((e) => {
-          if (e.id !== id) return e;
-          const w = Math.max(5, dimensions.width);
-          const h = Math.max(5, dimensions.height);
-          // Scale any existing polygon vertices to the new box so the
-          // custom outline stays proportional.
-          const polygon = e.polygon
-            ? e.polygon.map((p) => ({
-                x: (p.x / e.dimensions.width) * w,
-                y: (p.y / e.dimensions.height) * h,
-              }))
-            : e.polygon;
-          return { ...e, dimensions: { width: w, height: h }, polygon };
-        }),
-      },
-    })),
+    set((state) => {
+      const target = state.room.equipment.find((e) => e.id === id);
+      if (!target) return state;
+      const w = Math.max(5, dimensions.width);
+      const h = Math.max(5, dimensions.height);
+      const type = target.type;
+      // Sync across all items of the same type so they stay consistent.
+      return {
+        room: {
+          ...state.room,
+          equipment: state.room.equipment.map((e) => {
+            if (e.type !== type) return e;
+            const polygon = e.polygon
+              ? e.polygon.map((p) => ({
+                  x: (p.x / e.dimensions.width) * w,
+                  y: (p.y / e.dimensions.height) * h,
+                }))
+              : e.polygon;
+            return { ...e, dimensions: { width: w, height: h }, polygon };
+          }),
+        },
+      };
+    }),
 
   setEquipmentPolygon: (id, polygon) =>
-    set((state) => ({
-      room: {
-        ...state.room,
-        equipment: state.room.equipment.map((e) =>
-          e.id === id
-            ? { ...e, polygon: polygon && polygon.length >= 3 ? polygon : undefined }
-            : e
-        ),
-      },
-    })),
+    set((state) => {
+      const target = state.room.equipment.find((e) => e.id === id);
+      if (!target) return state;
+      const poly = polygon && polygon.length >= 3 ? polygon : undefined;
+      const type = target.type;
+      return {
+        room: {
+          ...state.room,
+          equipment: state.room.equipment.map((e) =>
+            e.type === type ? { ...e, polygon: poly } : e
+          ),
+        },
+      };
+    }),
 
   updateEquipmentVertex: (id, index, pos) =>
-    set((state) => ({
-      room: {
-        ...state.room,
-        equipment: state.room.equipment.map((e) => {
-          if (e.id !== id || !e.polygon) return e;
-          const polygon = e.polygon.map((p, i) => (i === index ? pos : p));
-          return { ...e, polygon };
-        }),
-      },
-    })),
+    set((state) => {
+      const target = state.room.equipment.find((e) => e.id === id);
+      if (!target || !target.polygon) return state;
+      const nextPoly = target.polygon.map((p, i) => (i === index ? pos : p));
+      const type = target.type;
+      return {
+        room: {
+          ...state.room,
+          equipment: state.room.equipment.map((e) =>
+            e.type === type ? { ...e, polygon: nextPoly } : e
+          ),
+        },
+      };
+    }),
 
   insertEquipmentVertex: (id, index, pos) =>
-    set((state) => ({
-      room: {
-        ...state.room,
-        equipment: state.room.equipment.map((e) => {
-          if (e.id !== id || !e.polygon) return e;
-          const polygon = [...e.polygon];
-          polygon.splice(index, 0, pos);
-          return { ...e, polygon };
-        }),
-      },
-    })),
+    set((state) => {
+      const target = state.room.equipment.find((e) => e.id === id);
+      if (!target || !target.polygon) return state;
+      const nextPoly = [...target.polygon];
+      nextPoly.splice(index, 0, pos);
+      const type = target.type;
+      return {
+        room: {
+          ...state.room,
+          equipment: state.room.equipment.map((e) =>
+            e.type === type ? { ...e, polygon: nextPoly } : e
+          ),
+        },
+      };
+    }),
 
   removeEquipmentVertex: (id, index) =>
-    set((state) => ({
-      room: {
-        ...state.room,
-        equipment: state.room.equipment.map((e) => {
-          if (e.id !== id || !e.polygon) return e;
-          if (e.polygon.length <= 3) return e;
-          const polygon = e.polygon.filter((_, i) => i !== index);
-          return { ...e, polygon };
-        }),
-      },
-    })),
+    set((state) => {
+      const target = state.room.equipment.find((e) => e.id === id);
+      if (!target || !target.polygon || target.polygon.length <= 3) return state;
+      const nextPoly = target.polygon.filter((_, i) => i !== index);
+      const type = target.type;
+      return {
+        room: {
+          ...state.room,
+          equipment: state.room.equipment.map((e) =>
+            e.type === type ? { ...e, polygon: nextPoly } : e
+          ),
+        },
+      };
+    }),
 
   convertEquipmentToPolygon: (id) =>
-    set((state) => ({
-      room: {
-        ...state.room,
-        equipment: state.room.equipment.map((e) => {
-          if (e.id !== id || e.polygon) return e;
-          const { width, height } = e.dimensions;
-          const polygon: Position[] = [
-            { x: 0, y: 0 },
-            { x: width, y: 0 },
-            { x: width, y: height },
-            { x: 0, y: height },
-          ];
-          return { ...e, polygon };
-        }),
-      },
-    })),
+    set((state) => {
+      const target = state.room.equipment.find((e) => e.id === id);
+      if (!target) return state;
+      const type = target.type;
+      const { width, height } = target.dimensions;
+      const defaultPoly: Position[] = [
+        { x: 0, y: 0 },
+        { x: width, y: 0 },
+        { x: width, y: height },
+        { x: 0, y: height },
+      ];
+      return {
+        room: {
+          ...state.room,
+          equipment: state.room.equipment.map((e) => {
+            if (e.type !== type) return e;
+            // Reuse the target's polygon when present so all items end up
+            // sharing the same outline after entry into shape edit.
+            return { ...e, polygon: target.polygon ?? defaultPoly };
+          }),
+        },
+      };
+    }),
 
   toggleLock: (id) =>
     set((state) => ({
