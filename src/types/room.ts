@@ -10,7 +10,10 @@ export interface Dimensions {
 
 export type EquipmentType =
   | 'operating-table'
-  | 'patient-cart'           // da Vinci X Patient Side Robot (PSR)
+  | 'patient-cart'           // da Vinci X Patient Side Robot (PSR) -- legacy
+  | 'patient-cart-3arm'      // PSR: 3-arm configuration
+  | 'patient-cart-4arm-left' // PSR: 4-arm configuration, left docking
+  | 'patient-cart-4arm-right'// PSR: 4-arm configuration, right docking
   | 'patient-cart-backup'    // Backup PSR
   | 'surgeon-console'
   | 'vision-cart'
@@ -43,6 +46,12 @@ export interface EquipmentCatalogEntry {
   dimensions: Dimensions;
   color: string;
   shape?: 'rect' | 'circle';
+  /**
+   * Optional default polygon outline baked into the catalog entry. Used by
+   * specialized variants (e.g. the PSR arm configurations) whose distinctive
+   * shape should be visible even before the user customizes it.
+   */
+  polygon?: Position[];
 }
 
 export interface Equipment {

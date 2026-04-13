@@ -36,6 +36,13 @@ interface RoomState {
   removeEquipmentVertex: (id: string, index: number) => void;
   /** Convert an item's default rect outline into a 4-vertex polygon. */
   convertEquipmentToPolygon: (id: string) => void;
+  /**
+   * Replace an item's type with another catalog entry (e.g. switch between
+   * PSR arm configurations). Resets dimensions, color, shape, polygon, and
+   * label to the new catalog's defaults while preserving id, position,
+   * rotation, isLocked, and zIndex.
+   */
+  switchEquipmentConfig: (id: string, newType: EquipmentType) => void;
   toggleLock: (id: string) => void;
   setRoomDimensions: (width: number, height: number) => void;
   setRoomPolygon: (polygon: Position[] | null) => void;
@@ -64,12 +71,17 @@ export const useRoomStore = create<RoomState>((set) => ({
       if (!catalog) return state;
 
       // Apply any persisted per-type overrides so a newly-added item matches
-      // the user's customized template (dimensions + polygon outline).
+      // the user's customized template. Fall back to any polygon baked into
+      // the catalog entry (e.g. PSR configs), then to no polygon at all.
       const override = getTypeOverride(catalog.type);
       const dimensions = override?.dimensions
         ? { ...override.dimensions }
         : { ...catalog.dimensions };
-      const polygon = override?.polygon ? override.polygon.map((p) => ({ ...p })) : undefined;
+      const polygon = override?.polygon
+        ? override.polygon.map((p) => ({ ...p }))
+        : catalog.polygon
+          ? catalog.polygon.map((p) => ({ ...p }))
+          : undefined;
 
       const newItem: Equipment = {
         id: uuidv4(),
@@ -105,7 +117,11 @@ export const useRoomStore = create<RoomState>((set) => ({
       const dimensions = override?.dimensions
         ? { ...override.dimensions }
         : { ...catalog.dimensions };
-      const polygon = override?.polygon ? override.polygon.map((p) => ({ ...p })) : undefined;
+      const polygon = override?.polygon
+        ? override.polygon.map((p) => ({ ...p }))
+        : catalog.polygon
+          ? catalog.polygon.map((p) => ({ ...p }))
+          : undefined;
 
       const newItem: Equipment = {
         id: uuidv4(),
@@ -276,6 +292,46 @@ export const useRoomStore = create<RoomState>((set) => ({
             // sharing the same outline after entry into shape edit.
             return { ...e, polygon: target.polygon ?? defaultPoly };
           }),
+        },
+      };
+    }),
+
+  switchEquipmentConfig: (id, newType) =>
+    set((state) => {
+      const target = state.room.equipment.find((e) => e.id === id);
+      if (!target) return state;
+      const catalog = findEntry(newType);
+      if (!catalog) return state;
+
+      // Prefer any user override for the target type, then the catalog's
+      // baked-in defaults. This matches how `addEquipment` populates a fresh
+      // item, so switching config feels like re-adding the item in place.
+      const override = getTypeOverride(catalog.type);
+      const dimensions = override?.dimensions
+        ? { ...override.dimensions }
+        : { ...catalog.dimensions };
+      const polygon = override?.polygon
+        ? override.polygon.map((p) => ({ ...p }))
+        : catalog.polygon
+          ? catalog.polygon.map((p) => ({ ...p }))
+          : undefined;
+
+      return {
+        room: {
+          ...state.room,
+          equipment: state.room.equipment.map((e) =>
+            e.id === id
+              ? {
+                  ...e,
+                  type: catalog.type,
+                  label: catalog.label,
+                  color: catalog.color,
+                  shape: catalog.shape,
+                  dimensions,
+                  polygon,
+                }
+              : e
+          ),
         },
       };
     }),

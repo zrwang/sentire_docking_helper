@@ -32,7 +32,9 @@ export interface DetectionResult {
 
 const EQUIPMENT_TYPES: EquipmentType[] = [
   'operating-table',
-  'patient-cart',
+  'patient-cart-3arm',
+  'patient-cart-4arm-left',
+  'patient-cart-4arm-right',
   'patient-cart-backup',
   'surgeon-console',
   'vision-cart',
@@ -67,7 +69,7 @@ Use only these equipment types (pick the closest match; use "generic" when nothi
 ${EQUIPMENT_TYPES.join(', ')}
 
 Common da Vinci X floor-plan abbreviations:
-- PSR / Patient Side Robot / Patient Cart -> patient-cart
+- PSR / Patient Side Robot / Patient Cart -> patient-cart-4arm-left (default); pick patient-cart-3arm if only 3 arms are shown, patient-cart-4arm-right if arms visibly fan to the right side of the base
 - Backup PSR / 2nd PSR -> patient-cart-backup
 - Surgeon Console / SC -> surgeon-console
 - Vision Cart / VC -> vision-cart

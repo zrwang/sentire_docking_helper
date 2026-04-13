@@ -59,7 +59,7 @@ export function createPartialNephrectomyPreset(): Room {
 
     // --- Centre: operating table + da Vinci patient carts ---
     { type: 'operating-table', label: 'Operating Table', position: { x: 430, y: 290 }, rotation: 90 },
-    { type: 'patient-cart', label: 'Patient Side Robot', position: { x: 440, y: 220 } },
+    { type: 'patient-cart-4arm-left', label: 'PSR (4-arm, left)', position: { x: 440, y: 220 } },
     {
       type: 'patient-cart-backup',
       label: 'Patient Side Robot (backup)',

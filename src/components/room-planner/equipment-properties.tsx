@@ -2,6 +2,8 @@ import { useRef } from 'react';
 import { useAppStore } from '@/stores/app-store';
 import { useRoomStore } from '@/stores/room-store';
 import { useIconStore } from '@/stores/icon-store';
+import { PSR_CONFIGS, isPsrConfigType } from '@/constants/psr-configs';
+import type { EquipmentType } from '@/types/room';
 
 interface EquipmentPropertiesProps {
   /** Item to edit. Falls back to the currently selected equipment. */
@@ -29,6 +31,7 @@ export function EquipmentProperties({ itemId, onClose, embedded }: EquipmentProp
     resizeEquipment,
     convertEquipmentToPolygon,
     setEquipmentPolygon,
+    switchEquipmentConfig,
     toggleLock,
     removeEquipment,
   } = useRoomStore();
@@ -130,6 +133,11 @@ export function EquipmentProperties({ itemId, onClose, embedded }: EquipmentProp
   };
 
   const currentIcon = icons[item.type];
+  const isPsr = isPsrConfigType(item.type as string);
+
+  const handleSwitchConfig = (newType: EquipmentType) => {
+    switchEquipmentConfig(item.id, newType);
+  };
 
   const body = (
     <div className="flex flex-col gap-3">
@@ -146,6 +154,33 @@ export function EquipmentProperties({ itemId, onClose, embedded }: EquipmentProp
           {Math.round(item.dimensions.width)} x {Math.round(item.dimensions.height)} cm
         </span>
       </div>
+
+      {/* PSR config switcher (only for patient-cart variants) */}
+      {isPsr && (
+        <div>
+          <label className="block text-[10px] text-gray-500 mb-1">Config</label>
+          <div className="grid grid-cols-3 gap-1">
+            {PSR_CONFIGS.map((cfg) => {
+              const active = cfg.type === item.type;
+              return (
+                <button
+                  key={cfg.type}
+                  onClick={() => handleSwitchConfig(cfg.type)}
+                  disabled={item.isLocked}
+                  title={cfg.description}
+                  className={`px-1 py-1 rounded text-[10px] font-medium transition-colors disabled:opacity-50 ${
+                    active
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  {cfg.shortLabel}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Position */}
       <div className="grid grid-cols-2 gap-2">

@@ -1,4 +1,5 @@
 import type { EquipmentCatalogEntry, Room } from '@/types/room';
+import { PSR_CONFIGS } from './psr-configs';
 
 export const EQUIPMENT_CATALOG: EquipmentCatalogEntry[] = [
   // --- Core surgical equipment ---
@@ -8,12 +9,10 @@ export const EQUIPMENT_CATALOG: EquipmentCatalogEntry[] = [
     dimensions: { width: 200, height: 55 },
     color: '#6B7280',
   },
-  {
-    type: 'patient-cart',
-    label: 'Patient Side Robot',
-    dimensions: { width: 100, height: 110 },
-    color: '#3B82F6',
-  },
+  // Patient Side Robot -- three distinct arm configurations. Rendered in the
+  // palette as a single grouped picker, but each config is its own catalog
+  // entry so per-type overrides (dimensions, polygon, icon) apply per config.
+  ...PSR_CONFIGS,
   {
     type: 'patient-cart-backup',
     label: 'Patient Side Robot (backup)',
@@ -149,7 +148,21 @@ export const EQUIPMENT_CATALOG: EquipmentCatalogEntry[] = [
     color: '#9CA3AF',
     shape: 'circle',
   },
+
+  // --- Legacy entries (hidden from palette, kept for saved-layout compat) ---
+  {
+    type: 'patient-cart',
+    label: 'Patient Side Robot',
+    dimensions: { width: 100, height: 110 },
+    color: '#3B82F6',
+  },
 ];
+
+/**
+ * Type strings that should NOT appear in the palette list but are kept in
+ * the catalog so saved layouts and imports can still resolve them.
+ */
+export const HIDDEN_PALETTE_TYPES = new Set<string>(['patient-cart']);
 
 /**
  * Fallback entry used when code needs a default catalog (e.g. AI import
