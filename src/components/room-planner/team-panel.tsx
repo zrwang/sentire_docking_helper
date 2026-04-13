@@ -24,7 +24,7 @@ export function TeamPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
-    <SidePanelSection title="Surgical Team">
+    <SidePanelSection title="Surgical Team" storageKey="team">
       <div className="flex flex-col gap-1">
         {members.length === 0 && !adding && (
           <p className="text-[11px] text-gray-500 px-1 py-1">

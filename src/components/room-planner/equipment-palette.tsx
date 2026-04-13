@@ -20,12 +20,17 @@ export function EquipmentPalette() {
   const clearIcon = useIconStore((s) => s.clearIcon);
   const openTypeMenu = useContextMenuStore((s) => s.openTypeMenu);
   const hiddenTypes = usePaletteVisibilityStore((s) => s.hidden);
+  const deletedTypes = usePaletteVisibilityStore((s) => s.deleted);
   const hideType = usePaletteVisibilityStore((s) => s.hide);
   const unhideType = usePaletteVisibilityStore((s) => s.unhide);
+  const markDeleted = usePaletteVisibilityStore((s) => s.markDeleted);
+  const undeleteType = usePaletteVisibilityStore((s) => s.undelete);
   const restoreAllHidden = usePaletteVisibilityStore((s) => s.restoreAll);
   const [modalOpen, setModalOpen] = useState(false);
   const [showHiddenPanel, setShowHiddenPanel] = useState(false);
-  const hiddenSet = new Set(hiddenTypes);
+  const [showDeletedPanel, setShowDeletedPanel] = useState(false);
+  // Any type in either set is excluded from the main palette.
+  const excludedSet = new Set([...hiddenTypes, ...deletedTypes]);
 
   /**
    * Render either the uploaded icon (if any) or the default colored swatch
@@ -83,35 +88,40 @@ export function EquipmentPalette() {
   const catalogFiltered = EQUIPMENT_CATALOG.filter(
     (e) =>
       !HIDDEN_PALETTE_TYPES.has(e.type as string) &&
-      !hiddenSet.has(e.type as string)
+      !excludedSet.has(e.type as string)
   );
   const visibleEntries = catalogFiltered.filter(
     (e) => !PSR_TYPE_SET.has(e.type as string)
   );
   const psrPickerIndex = visibleEntries.findIndex((e) => e.type === 'operating-table');
   const visiblePsrConfigs = PSR_CONFIGS.filter(
-    (c) => !hiddenSet.has(c.type as string)
+    (c) => !excludedSet.has(c.type as string)
   );
 
-  // Names for the "hidden" restore list (includes custom entries too). Custom
-  // entries get a Delete action so the user can fully remove them after they
-  // hide them -- built-ins can only be restored since they live in code.
-  const hiddenLabels: {
-    type: EquipmentType;
-    label: string;
-    isCustom: boolean;
-  }[] = hiddenTypes
-    .map((t) => {
-      const built = EQUIPMENT_CATALOG.find((e) => e.type === t);
-      const custom = customEntries.find((e) => e.type === t);
-      const entry = built ?? custom;
-      if (!entry) return null;
-      return {
-        type: entry.type as EquipmentType,
-        label: entry.label,
-        isCustom: !!custom && !built,
-      };
-    })
+  const resolveLabel = (t: string) => {
+    const built = EQUIPMENT_CATALOG.find((e) => e.type === t);
+    const custom = customEntries.find((e) => e.type === t);
+    const entry = built ?? custom;
+    if (!entry) return null;
+    return {
+      type: entry.type as EquipmentType,
+      label: entry.label,
+      isCustom: !!custom && !built,
+    };
+  };
+
+  // "Hidden" list -- visible in the collapsible panel with Restore + Delete.
+  const hiddenLabels = hiddenTypes
+    .map(resolveLabel)
+    .filter(
+      (x): x is { type: EquipmentType; label: string; isCustom: boolean } =>
+        x !== null
+    );
+
+  // "Removed" list -- built-in types the user deleted. Custom types get hard-
+  // removed immediately so they never land here.
+  const deletedLabels = deletedTypes
+    .map(resolveLabel)
     .filter(
       (x): x is { type: EquipmentType; label: string; isCustom: boolean } =>
         x !== null
@@ -121,6 +131,27 @@ export function EquipmentPalette() {
     e.stopPropagation();
     e.preventDefault();
     hideType(type);
+  };
+
+  /**
+   * Delete from the Hidden panel. Custom entries are hard-removed from the
+   * catalog (their icon is cleaned up too); built-ins can't truly leave the
+   * code catalog, so they move into the "Removed" subsection where they stay
+   * hidden but remain recoverable.
+   */
+  const handleDeleteHidden = (type: EquipmentType, label: string, isCustom: boolean) => {
+    if (isCustom) {
+      handleRemoveCustom(type, label);
+      return;
+    }
+    if (
+      !window.confirm(
+        `Remove "${label}" from the palette? You can bring it back later from the "Removed" section.`
+      )
+    ) {
+      return;
+    }
+    markDeleted(type);
   };
 
   const renderEntry = (entry: (typeof EQUIPMENT_CATALOG)[number]) => (
@@ -195,7 +226,7 @@ export function EquipmentPalette() {
     );
 
   return (
-    <SidePanelSection title="Equipment">
+    <SidePanelSection title="Equipment" storageKey="equipment">
       <div className="flex flex-col gap-1">
         {visibleEntries.flatMap((entry, i) => {
           // Insert the PSR picker right after the operating table so the
@@ -266,15 +297,19 @@ export function EquipmentPalette() {
                     >
                       Restore
                     </button>
-                    {h.isCustom && (
-                      <button
-                        onClick={() => handleRemoveCustom(h.type, h.label)}
-                        title="Permanently delete this custom equipment"
-                        className="text-[10px] text-gray-400 hover:text-red-400"
-                      >
-                        Delete
-                      </button>
-                    )}
+                    <button
+                      onClick={() =>
+                        handleDeleteHidden(h.type, h.label, h.isCustom)
+                      }
+                      title={
+                        h.isCustom
+                          ? 'Permanently delete this custom equipment'
+                          : 'Remove from palette (recoverable from the "Removed" list)'
+                      }
+                      className="text-[10px] text-gray-400 hover:text-red-400"
+                    >
+                      Delete
+                    </button>
                   </div>
                 ))}
                 {hiddenLabels.length > 1 && (
@@ -285,6 +320,37 @@ export function EquipmentPalette() {
                     Restore all
                   </button>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {deletedLabels.length > 0 && (
+          <div className="mt-1 pt-1 border-t border-gray-800">
+            <button
+              onClick={() => setShowDeletedPanel((v) => !v)}
+              className="w-full flex items-center justify-between px-2 py-1 text-[10px] uppercase tracking-wider text-gray-500 hover:text-gray-300"
+            >
+              <span>Removed ({deletedLabels.length})</span>
+              <span>{showDeletedPanel ? '−' : '+'}</span>
+            </button>
+            {showDeletedPanel && (
+              <div className="flex flex-col gap-0.5 mt-1">
+                {deletedLabels.map((d) => (
+                  <div
+                    key={d.type}
+                    className="flex items-center gap-2 px-2 py-1 rounded text-xs text-gray-500 hover:bg-gray-800"
+                  >
+                    <span className="flex-1 truncate">{d.label}</span>
+                    <button
+                      onClick={() => undeleteType(d.type)}
+                      title="Bring back into the palette"
+                      className="text-[10px] text-gray-400 hover:text-emerald-400"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
