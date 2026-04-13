@@ -3,6 +3,7 @@ import { EQUIPMENT_CATALOG } from '@/constants/room-defaults';
 import { useRoomStore } from '@/stores/room-store';
 import { useCustomEquipmentStore } from '@/stores/custom-equipment-store';
 import { useIconStore } from '@/stores/icon-store';
+import { useContextMenuStore } from '@/stores/context-menu-store';
 import type { EquipmentType } from '@/types/room';
 import { SidePanelSection } from '@/components/layout/side-panel';
 import { CustomEquipmentModal } from './custom-equipment-modal';
@@ -12,10 +13,19 @@ export function EquipmentPalette() {
   const customEntries = useCustomEquipmentStore((s) => s.entries);
   const removeCustomEntry = useCustomEquipmentStore((s) => s.removeEntry);
   const clearIcon = useIconStore((s) => s.clearIcon);
+  const openTypeMenu = useContextMenuStore((s) => s.openTypeMenu);
   const [modalOpen, setModalOpen] = useState(false);
 
   const handleAdd = (type: EquipmentType) => {
     addEquipment(type);
+  };
+
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    type: EquipmentType
+  ) => {
+    e.preventDefault();
+    openTypeMenu(type, e.clientX, e.clientY);
   };
 
   const handleRemoveCustom = (type: EquipmentType, label: string) => {
@@ -37,6 +47,8 @@ export function EquipmentPalette() {
           <button
             key={entry.type}
             onClick={() => handleAdd(entry.type)}
+            onContextMenu={(e) => handleContextMenu(e, entry.type)}
+            title="Click to add. Right-click to edit defaults."
             className="flex items-center gap-2 px-2 py-1.5 rounded text-left text-sm text-gray-300 hover:bg-gray-800 transition-colors group"
           >
             <div
@@ -66,6 +78,8 @@ export function EquipmentPalette() {
               >
                 <button
                   onClick={() => handleAdd(entry.type)}
+                  onContextMenu={(e) => handleContextMenu(e, entry.type)}
+                  title="Click to add. Right-click to edit defaults."
                   className="flex items-center gap-2 flex-1 min-w-0 text-left"
                 >
                   <div

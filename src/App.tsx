@@ -2,8 +2,8 @@ import { AppHeader } from '@/components/layout/app-header';
 import { TabNavigation } from '@/components/layout/tab-navigation';
 import { SidePanel } from '@/components/layout/side-panel';
 import { EquipmentPalette } from '@/components/room-planner/equipment-palette';
-import { EquipmentProperties } from '@/components/room-planner/equipment-properties';
 import { RoomCanvas } from '@/components/room-planner/room-canvas';
+import { ContextMenuHost } from '@/components/room-planner/context-menu-host';
 import { ImportModal } from '@/components/image-import/import-modal';
 import { useAppStore } from '@/stores/app-store';
 import { useDeleteShortcut } from '@/hooks/use-delete-shortcut';
@@ -13,7 +13,6 @@ function RoomTab() {
     <div className="flex flex-1 overflow-hidden">
       <SidePanel>
         <EquipmentPalette />
-        <EquipmentProperties />
       </SidePanel>
       <RoomCanvas />
     </div>
@@ -47,6 +46,7 @@ export default function App() {
         {activeTab === 'ports' && <PlaceholderTab title="Port Placement" />}
       </main>
       <ImportModal />
+      <ContextMenuHost />
     </div>
   );
 }

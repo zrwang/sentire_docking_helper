@@ -2,9 +2,22 @@ import { useRef } from 'react';
 import { useAppStore } from '@/stores/app-store';
 import { useRoomStore } from '@/stores/room-store';
 import { useIconStore } from '@/stores/icon-store';
-import { SidePanelSection } from '@/components/layout/side-panel';
 
-export function EquipmentProperties() {
+interface EquipmentPropertiesProps {
+  /** Item to edit. Falls back to the currently selected equipment. */
+  itemId?: string;
+  /** Optional callback invoked after a destructive action (e.g. delete). */
+  onClose?: () => void;
+  /** When true, render without an outer container (caller handles chrome). */
+  embedded?: boolean;
+}
+
+/**
+ * Inline editor for a single piece of equipment. Used both as a right-click
+ * context menu panel and (historically) inside the side panel. Accepts an
+ * explicit `itemId` so it can render for any item, not just the selected one.
+ */
+export function EquipmentProperties({ itemId, onClose, embedded }: EquipmentPropertiesProps = {}) {
   const selectedId = useAppStore((s) => s.selectedEquipmentId);
   const selectEquipment = useAppStore((s) => s.selectEquipment);
   const itemContourEditId = useAppStore((s) => s.itemContourEditId);
@@ -24,15 +37,14 @@ export function EquipmentProperties() {
   const clearIcon = useIconStore((s) => s.clearIcon);
   const iconInputRef = useRef<HTMLInputElement>(null);
 
-  const item = room.equipment.find((e) => e.id === selectedId);
+  const targetId = itemId ?? selectedId;
+  const item = room.equipment.find((e) => e.id === targetId);
 
   if (!item) {
     return (
-      <SidePanelSection title="Properties">
-        <p className="text-xs text-gray-500">
-          Select an item to view its properties.
-        </p>
-      </SidePanelSection>
+      <div className="text-xs text-gray-500 px-2 py-1">
+        Select an item to view its properties.
+      </div>
     );
   }
 
@@ -65,6 +77,7 @@ export function EquipmentProperties() {
       if (!item.polygon) convertEquipmentToPolygon(item.id);
       setItemContourEditId(item.id);
     }
+    onClose?.();
   };
 
   const handleResetShape = () => {
@@ -75,6 +88,7 @@ export function EquipmentProperties() {
   const handleDelete = () => {
     removeEquipment(item.id);
     selectEquipment(null);
+    onClose?.();
   };
 
   const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,184 +131,174 @@ export function EquipmentProperties() {
 
   const currentIcon = icons[item.type];
 
-  return (
-    <SidePanelSection title="Properties">
-      <div className="flex flex-col gap-3">
-        {/* Name */}
-        <div>
+  const body = (
+    <div className="flex flex-col gap-3">
+      {/* Name */}
+      <div>
+        <div className="flex items-center gap-2 mb-1">
           <div
-            className="flex items-center gap-2 mb-1"
-          >
-            <div
-              className="w-3 h-3 rounded-sm"
-              style={{ backgroundColor: item.color }}
-            />
-            <span className="text-sm font-medium text-white">{item.label}</span>
-          </div>
-          <span className="text-[10px] text-gray-500">
-            {item.dimensions.width} x {item.dimensions.height} cm
-          </span>
+            className="w-3 h-3 rounded-sm"
+            style={{ backgroundColor: item.color }}
+          />
+          <span className="text-sm font-medium text-white">{item.label}</span>
         </div>
+        <span className="text-[10px] text-gray-500">
+          {Math.round(item.dimensions.width)} x {Math.round(item.dimensions.height)} cm
+        </span>
+      </div>
 
-        {/* Position */}
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="block text-[10px] text-gray-500 mb-0.5">X (cm)</label>
-            <input
-              type="number"
-              value={Math.round(item.position.x)}
-              onChange={(e) => handlePositionChange('x', e.target.value)}
-              disabled={item.isLocked}
-              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] text-gray-500 mb-0.5">Y (cm)</label>
-            <input
-              type="number"
-              value={Math.round(item.position.y)}
-              onChange={(e) => handlePositionChange('y', e.target.value)}
-              disabled={item.isLocked}
-              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
-            />
-          </div>
-        </div>
-
-        {/* Size */}
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="block text-[10px] text-gray-500 mb-0.5">
-              Width (cm)
-            </label>
-            <input
-              type="number"
-              value={Math.round(item.dimensions.width)}
-              min={5}
-              onChange={(e) => handleSizeChange('width', e.target.value)}
-              disabled={item.isLocked}
-              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] text-gray-500 mb-0.5">
-              Height (cm)
-            </label>
-            <input
-              type="number"
-              value={Math.round(item.dimensions.height)}
-              min={5}
-              onChange={(e) => handleSizeChange('height', e.target.value)}
-              disabled={item.isLocked}
-              className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
-            />
-          </div>
-        </div>
-
-        {/* Rotation */}
+      {/* Position */}
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-[10px] text-gray-500 mb-0.5">
-            Rotation (deg)
-          </label>
+          <label className="block text-[10px] text-gray-500 mb-0.5">X (cm)</label>
           <input
             type="number"
-            value={item.rotation}
-            onChange={(e) => handleRotationChange(e.target.value)}
-            step={15}
+            value={Math.round(item.position.x)}
+            onChange={(e) => handlePositionChange('x', e.target.value)}
             disabled={item.isLocked}
             className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
           />
         </div>
-
-        {/* Shape / contour */}
-        <div className="flex gap-2">
-          <button
-            onClick={handleToggleShapeEdit}
+        <div>
+          <label className="block text-[10px] text-gray-500 mb-0.5">Y (cm)</label>
+          <input
+            type="number"
+            value={Math.round(item.position.y)}
+            onChange={(e) => handlePositionChange('y', e.target.value)}
             disabled={item.isLocked}
-            title="Drag vertices to reshape. Click an edge midpoint to add a vertex. Alt+click a vertex to delete."
-            className={`flex-1 px-2 py-1.5 rounded text-xs font-medium disabled:opacity-50 ${
-              isEditingShape
-                ? 'bg-amber-500 text-black hover:bg-amber-400'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
+            className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
+          />
+        </div>
+      </div>
+
+      {/* Size */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-[10px] text-gray-500 mb-0.5">Width (cm)</label>
+          <input
+            type="number"
+            value={Math.round(item.dimensions.width)}
+            min={5}
+            onChange={(e) => handleSizeChange('width', e.target.value)}
+            disabled={item.isLocked}
+            className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] text-gray-500 mb-0.5">Height (cm)</label>
+          <input
+            type="number"
+            value={Math.round(item.dimensions.height)}
+            min={5}
+            onChange={(e) => handleSizeChange('height', e.target.value)}
+            disabled={item.isLocked}
+            className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
+          />
+        </div>
+      </div>
+
+      {/* Rotation */}
+      <div>
+        <label className="block text-[10px] text-gray-500 mb-0.5">Rotation (deg)</label>
+        <input
+          type="number"
+          value={item.rotation}
+          onChange={(e) => handleRotationChange(e.target.value)}
+          step={15}
+          disabled={item.isLocked}
+          className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
+        />
+      </div>
+
+      {/* Shape / contour */}
+      <div className="flex gap-2">
+        <button
+          onClick={handleToggleShapeEdit}
+          disabled={item.isLocked}
+          title="Drag vertices to reshape. Click an edge midpoint to add a vertex. Alt+click a vertex to delete."
+          className={`flex-1 px-2 py-1.5 rounded text-xs font-medium disabled:opacity-50 ${
+            isEditingShape
+              ? 'bg-amber-500 text-black hover:bg-amber-400'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+          }`}
+        >
+          {isEditingShape ? 'Done Shape' : 'Edit Shape'}
+        </button>
+        {item.polygon && (
+          <button
+            onClick={handleResetShape}
+            disabled={item.isLocked}
+            title="Revert to the default rectangular outline"
+            className="px-2 py-1.5 rounded text-xs bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50"
           >
-            {isEditingShape ? 'Done Shape' : 'Edit Shape'}
+            Reset
           </button>
-          {item.polygon && (
+        )}
+      </div>
+
+      {/* Custom icon */}
+      <div className="pt-2 border-t border-gray-800">
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-[10px] text-gray-500">
+            Icon for all "{item.label}"
+          </label>
+          {currentIcon && (
             <button
-              onClick={handleResetShape}
-              disabled={item.isLocked}
-              title="Revert to the default rectangular outline"
-              className="px-2 py-1.5 rounded text-xs bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50"
+              onClick={() => clearIcon(item.type)}
+              className="text-[10px] text-gray-500 hover:text-red-400"
             >
               Reset
             </button>
           )}
         </div>
-
-        {/* Custom icon (applies to all items of this type) */}
-        <div className="pt-2 border-t border-gray-800">
-          <div className="flex items-center justify-between mb-1">
-            <label className="block text-[10px] text-gray-500">
-              Icon for all "{item.label}"
-            </label>
-            {currentIcon && (
-              <button
-                onClick={() => clearIcon(item.type)}
-                className="text-[10px] text-gray-500 hover:text-red-400"
-              >
-                Reset
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              ref={iconInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/svg+xml,image/webp"
-              onChange={handleIconUpload}
-              className="hidden"
+        <div className="flex items-center gap-2">
+          <input
+            ref={iconInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            onChange={handleIconUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => iconInputRef.current?.click()}
+            className="flex-1 px-2 py-1.5 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-200"
+          >
+            {currentIcon ? 'Replace icon' : 'Upload icon'}
+          </button>
+          {currentIcon && (
+            <img
+              src={currentIcon}
+              alt="icon preview"
+              className="h-8 w-8 object-contain border border-gray-700 rounded bg-gray-950"
             />
-            <button
-              onClick={() => iconInputRef.current?.click()}
-              className="flex-1 px-2 py-1.5 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-200"
-            >
-              {currentIcon ? 'Replace icon' : 'Upload icon'}
-            </button>
-            {currentIcon && (
-              <img
-                src={currentIcon}
-                alt="icon preview"
-                className="h-8 w-8 object-contain border border-gray-700 rounded bg-gray-950"
-              />
-            )}
-          </div>
-          <p className="text-[10px] text-gray-600 mt-1">
-            PNG / SVG recommended. The image replaces the coloured square for every
-            "{item.label}" on the canvas.
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 mt-1">
-          <button
-            onClick={() => toggleLock(item.id)}
-            className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
-              item.isLocked
-                ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/40'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            {item.isLocked ? 'Unlock' : 'Lock'}
-          </button>
-          <button
-            onClick={handleDelete}
-            title="Delete (or press Delete / Backspace)"
-            className="flex-1 px-2 py-1.5 rounded text-xs font-medium bg-red-900/30 text-red-400 border border-red-800/40 hover:bg-red-900/50 transition-colors"
-          >
-            Delete
-          </button>
+          )}
         </div>
       </div>
-    </SidePanelSection>
+
+      {/* Actions */}
+      <div className="flex gap-2 mt-1">
+        <button
+          onClick={() => toggleLock(item.id)}
+          className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+            item.isLocked
+              ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/40'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+          }`}
+        >
+          {item.isLocked ? 'Unlock' : 'Lock'}
+        </button>
+        <button
+          onClick={handleDelete}
+          title="Delete (or press Delete / Backspace)"
+          className="flex-1 px-2 py-1.5 rounded text-xs font-medium bg-red-900/30 text-red-400 border border-red-800/40 hover:bg-red-900/50 transition-colors"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
   );
+
+  if (embedded) return body;
+
+  return <div className="p-2">{body}</div>;
 }

@@ -5,6 +5,7 @@ import type { Equipment } from '@/types/room';
 import { useAppStore } from '@/stores/app-store';
 import { useRoomStore } from '@/stores/room-store';
 import { useIconStore } from '@/stores/icon-store';
+import { useContextMenuStore } from '@/stores/context-menu-store';
 import { snapToGrid } from '@/utils/snap';
 import { getOverlappingItems } from '@/utils/collision';
 import { ItemContourEditor } from './item-contour-editor';
@@ -18,7 +19,8 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   const groupRef = useRef<Konva.Group>(null);
   const { selectedEquipmentId, selectEquipment, snapEnabled, itemContourEditId } = useAppStore();
   const isContourEditing = itemContourEditId === item.id;
-  const { room, moveEquipment, rotateEquipment, removeEquipment } = useRoomStore();
+  const { room, moveEquipment, rotateEquipment, removeEquipment, resizeEquipment } = useRoomStore();
+  const openEquipmentMenu = useContextMenuStore((s) => s.openEquipmentMenu);
   const iconDataUrl = useIconStore((s) => s.icons[item.type]);
   const [iconImage, setIconImage] = useState<HTMLImageElement | null>(null);
   const [isOverlapping, setIsOverlapping] = useState(false);
@@ -134,6 +136,36 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
     e.target.y(-handleOffset);
   };
 
+  const handleContextMenu = (
+    e: Konva.KonvaEventObject<PointerEvent | MouseEvent>
+  ) => {
+    e.cancelBubble = true;
+    const native = e.evt as MouseEvent | undefined;
+    if (native) native.preventDefault();
+    selectEquipment(item.id);
+    openEquipmentMenu(item.id, native?.clientX ?? 0, native?.clientY ?? 0);
+  };
+
+  const handleResizeDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+    // The handle is a child of the Group (rotated local coord space). Using
+    // the handle's local x/y gives us the desired width/height directly --
+    // no need to unwind rotation ourselves.
+    e.cancelBubble = true;
+    const node = e.target;
+    const w = Math.max(10, node.x());
+    const h = Math.max(10, node.y());
+    resizeEquipment(item.id, { width: w, height: h });
+    // Pin the handle to the new bottom-right corner each frame.
+    node.x(w);
+    node.y(h);
+  };
+
+  const handleResizeDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    e.cancelBubble = true;
+    e.target.x(item.dimensions.width);
+    e.target.y(item.dimensions.height);
+  };
+
   const fillColor = isOverlapping ? '#EF4444' : item.color;
   const isCircle = item.shape === 'circle';
 
@@ -161,6 +193,7 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
       onTap={handleClick}
       onDblClick={handleDblClick}
       onDblTap={handleDblClick}
+      onContextMenu={handleContextMenu}
     >
       {/* Selection border */}
       {isSelected && !isCircle && (
@@ -318,6 +351,41 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
 
       {/* Per-item contour editor overlay */}
       {isContourEditing && <ItemContourEditor item={item} scale={scale} />}
+
+      {/* Bottom-right resize handle (visible when selected) */}
+      {isSelected && !item.isLocked && !isContourEditing && (
+        <Rect
+          x={item.dimensions.width}
+          y={item.dimensions.height}
+          width={12 / scale}
+          height={12 / scale}
+          offsetX={6 / scale}
+          offsetY={6 / scale}
+          fill="#3B82F6"
+          stroke="white"
+          strokeWidth={1 / scale}
+          cornerRadius={2 / scale}
+          draggable
+          onMouseDown={(e) => {
+            e.cancelBubble = true;
+            handleSelectOnInteract();
+          }}
+          onTouchStart={(e) => {
+            e.cancelBubble = true;
+            handleSelectOnInteract();
+          }}
+          onDragMove={handleResizeDragMove}
+          onDragEnd={handleResizeDragEnd}
+          onMouseEnter={(e) => {
+            const stage = e.target.getStage();
+            if (stage) stage.container().style.cursor = 'nwse-resize';
+          }}
+          onMouseLeave={(e) => {
+            const stage = e.target.getStage();
+            if (stage) stage.container().style.cursor = '';
+          }}
+        />
+      )}
 
       {/* In-canvas delete badge shown on the selected item */}
       {isSelected && !item.isLocked && (
