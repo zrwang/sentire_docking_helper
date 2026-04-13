@@ -87,4 +87,14 @@ export interface Room {
   backgroundImage?: string;
   /** Opacity for the background image 0..1 */
   backgroundOpacity?: number;
+  /**
+   * Optional transform for the background image (in cm, room-space). When
+   * absent, the image fills (0, 0) → (room.width, room.height) -- legacy
+   * behavior. When present, the image is drawn at this position / size so
+   * the user can nudge and scale a traced reference freehand.
+   */
+  backgroundX?: number;
+  backgroundY?: number;
+  backgroundWidth?: number;
+  backgroundHeight?: number;
 }

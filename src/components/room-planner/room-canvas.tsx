@@ -19,8 +19,10 @@ import { ContourEditor } from './contour-editor';
 
 export function RoomCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { room, setRoomDimensions, addEquipmentAt } = useRoomStore();
-  const { gridVisible, snapEnabled, selectEquipment, contourEditMode } = useAppStore();
+  const { room, setRoomDimensions, addEquipmentAt, setBackgroundTransform } =
+    useRoomStore();
+  const { gridVisible, snapEnabled, selectEquipment, contourEditMode, bgAdjustMode } =
+    useAppStore();
   const { scale, position, stageRef, handleWheel, resetZoom } =
     useCanvasZoom(0.6);
 
@@ -185,12 +187,18 @@ export function RoomCanvas() {
 
         {/* Optional uploaded background image */}
         {room.backgroundImage && (
-          <Layer listening={false}>
+          <Layer listening={bgAdjustMode}>
             <BackgroundImage
               dataUrl={room.backgroundImage}
-              width={room.width}
-              height={room.height}
+              x={room.backgroundX ?? 0}
+              y={room.backgroundY ?? 0}
+              width={room.backgroundWidth ?? room.width}
+              height={room.backgroundHeight ?? room.height}
               opacity={room.backgroundOpacity ?? 0.35}
+              adjustable={bgAdjustMode}
+              scale={scale}
+              onMove={(p) => setBackgroundTransform(p)}
+              onResize={(s) => setBackgroundTransform(s)}
             />
           </Layer>
         )}

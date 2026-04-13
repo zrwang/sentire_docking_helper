@@ -18,6 +18,8 @@ interface AppState {
    * drag, but persists across interactions.
    */
   aspectLocked: boolean;
+  /** When true, the canvas exposes drag/resize handles for the background image. */
+  bgAdjustMode: boolean;
 
   setActiveTab: (tab: TabId) => void;
   selectEquipment: (id: string | null) => void;
@@ -27,6 +29,7 @@ interface AppState {
   setItemContourEditId: (id: string | null) => void;
   toggleAspectLocked: () => void;
   setAspectLocked: (on: boolean) => void;
+  setBgAdjustMode: (on: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -37,8 +40,9 @@ export const useAppStore = create<AppState>((set) => ({
   contourEditMode: false,
   itemContourEditId: null,
   aspectLocked: false,
+  bgAdjustMode: false,
 
-  setActiveTab: (tab) => set({ activeTab: tab, selectedEquipmentId: null, contourEditMode: false, itemContourEditId: null }),
+  setActiveTab: (tab) => set({ activeTab: tab, selectedEquipmentId: null, contourEditMode: false, itemContourEditId: null, bgAdjustMode: false }),
   selectEquipment: (id) => set({ selectedEquipmentId: id }),
   toggleSnap: () => set((s) => ({ snapEnabled: !s.snapEnabled })),
   toggleGrid: () => set((s) => ({ gridVisible: !s.gridVisible })),
@@ -51,4 +55,11 @@ export const useAppStore = create<AppState>((set) => ({
   setItemContourEditId: (id) => set({ itemContourEditId: id }),
   toggleAspectLocked: () => set((s) => ({ aspectLocked: !s.aspectLocked })),
   setAspectLocked: (on) => set({ aspectLocked: on }),
+  setBgAdjustMode: (on) =>
+    set((s) => ({
+      bgAdjustMode: on,
+      // Deselecting while entering adjust mode keeps clicks on the canvas
+      // from fighting with equipment selection handles.
+      selectedEquipmentId: on ? null : s.selectedEquipmentId,
+    })),
 }));

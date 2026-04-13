@@ -7,8 +7,8 @@ import { createPartialNephrectomyPreset } from '@/constants/preset-layouts';
 import { LayoutsMenu } from './layouts-menu';
 
 export function AppHeader() {
-  const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode } = useAppStore();
-  const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage, replaceRoom, convertRectToPolygon, normalizeRoom } = useRoomStore();
+  const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode, bgAdjustMode, setBgAdjustMode } = useAppStore();
+  const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage, setBackgroundTransform, replaceRoom, convertRectToPolygon, normalizeRoom } = useRoomStore();
   const openImport = useImportStore((s) => s.openImport);
   const demoName = useLayoutsStore((s) => s.demoName);
   const demoLayout = useLayoutsStore((s) =>
@@ -100,7 +100,39 @@ export function AppHeader() {
               className="w-20"
             />
             <button
-              onClick={() => setBackgroundImage(undefined)}
+              onClick={() => setBgAdjustMode(!bgAdjustMode)}
+              title={
+                bgAdjustMode
+                  ? 'Finish adjusting the background image'
+                  : 'Drag the image to move it and its corner handle to resize (aspect ratio is preserved)'
+              }
+              className={`px-2 py-0.5 text-xs rounded ${
+                bgAdjustMode
+                  ? 'bg-amber-500 text-black hover:bg-amber-400'
+                  : 'bg-gray-700 hover:bg-gray-600'
+              }`}
+            >
+              {bgAdjustMode ? 'Done' : 'Adjust'}
+            </button>
+            <button
+              onClick={() => {
+                setBackgroundTransform({
+                  x: undefined,
+                  y: undefined,
+                  width: undefined,
+                  height: undefined,
+                });
+              }}
+              title="Reset the background back to filling the room"
+              className="px-2 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 rounded"
+            >
+              Fit
+            </button>
+            <button
+              onClick={() => {
+                setBgAdjustMode(false);
+                setBackgroundImage(undefined);
+              }}
               className="px-2 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 rounded"
               title="Remove background image"
             >

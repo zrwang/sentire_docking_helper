@@ -58,6 +58,17 @@ interface RoomState {
   normalizeRoom: () => void;
   setBackgroundImage: (dataUrl: string | undefined, opacity?: number) => void;
   setBackgroundOpacity: (opacity: number) => void;
+  /**
+   * Move / resize the background-image overlay (cm, room-space). Passing
+   * undefined for any field clears that field so the image falls back to
+   * covering the whole room.
+   */
+  setBackgroundTransform: (transform: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+  }) => void;
   replaceRoom: (room: Room) => void;
   clearEquipment: () => void;
 }
@@ -450,12 +461,32 @@ export const useRoomStore = create<RoomState>((set) => ({
         ...state.room,
         backgroundImage: dataUrl,
         backgroundOpacity: opacity,
+        // Reset any previous transform -- the new image should start flush
+        // against the room bounds. The consumer can call
+        // setBackgroundTransform afterwards to customize.
+        backgroundX: undefined,
+        backgroundY: undefined,
+        backgroundWidth: undefined,
+        backgroundHeight: undefined,
       },
     })),
 
   setBackgroundOpacity: (opacity) =>
     set((state) => ({
       room: { ...state.room, backgroundOpacity: opacity },
+    })),
+
+  setBackgroundTransform: (transform) =>
+    set((state) => ({
+      room: {
+        ...state.room,
+        ...('x' in transform ? { backgroundX: transform.x } : {}),
+        ...('y' in transform ? { backgroundY: transform.y } : {}),
+        ...('width' in transform ? { backgroundWidth: transform.width } : {}),
+        ...('height' in transform
+          ? { backgroundHeight: transform.height }
+          : {}),
+      },
     })),
 
   replaceRoom: (room) => set({ room }),
