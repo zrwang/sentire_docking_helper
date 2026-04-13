@@ -12,9 +12,33 @@ export function EquipmentPalette() {
   const addEquipment = useRoomStore((s) => s.addEquipment);
   const customEntries = useCustomEquipmentStore((s) => s.entries);
   const removeCustomEntry = useCustomEquipmentStore((s) => s.removeEntry);
+  const icons = useIconStore((s) => s.icons);
   const clearIcon = useIconStore((s) => s.clearIcon);
   const openTypeMenu = useContextMenuStore((s) => s.openTypeMenu);
   const [modalOpen, setModalOpen] = useState(false);
+
+  /**
+   * Render either the uploaded icon (if any) or the default colored swatch
+   * so the palette entry matches what the user sees on the canvas.
+   */
+  const renderSwatch = (type: EquipmentType, color: string) => {
+    const icon = icons[type];
+    if (icon) {
+      return (
+        <img
+          src={icon}
+          alt=""
+          className="w-4 h-4 object-contain shrink-0"
+        />
+      );
+    }
+    return (
+      <div
+        className="w-4 h-3 rounded-sm shrink-0"
+        style={{ backgroundColor: color, opacity: 0.7 }}
+      />
+    );
+  };
 
   const handleAdd = (type: EquipmentType) => {
     addEquipment(type);
@@ -51,10 +75,7 @@ export function EquipmentPalette() {
             title="Click to add. Right-click to edit defaults."
             className="flex items-center gap-2 px-2 py-1.5 rounded text-left text-sm text-gray-300 hover:bg-gray-800 transition-colors group"
           >
-            <div
-              className="w-4 h-3 rounded-sm shrink-0"
-              style={{ backgroundColor: entry.color, opacity: 0.7 }}
-            />
+            {renderSwatch(entry.type, entry.color)}
             <div className="flex flex-col min-w-0">
               <span className="truncate group-hover:text-white">
                 {entry.label}
@@ -82,10 +103,7 @@ export function EquipmentPalette() {
                   title="Click to add. Right-click to edit defaults."
                   className="flex items-center gap-2 flex-1 min-w-0 text-left"
                 >
-                  <div
-                    className="w-4 h-3 rounded-sm shrink-0"
-                    style={{ backgroundColor: entry.color, opacity: 0.7 }}
-                  />
+                  {renderSwatch(entry.type, entry.color)}
                   <div className="flex flex-col min-w-0">
                     <span className="truncate group-hover:text-white">
                       {entry.label}
