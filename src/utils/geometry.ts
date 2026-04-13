@@ -49,7 +49,6 @@ function getAxes(corners: Position[]): Position[] {
   for (let i = 0; i < corners.length; i++) {
     const next = corners[(i + 1) % corners.length];
     const edge = { x: next.x - corners[i].x, y: next.y - corners[i].y };
-    // Normal (perpendicular)
     const len = Math.sqrt(edge.x ** 2 + edge.y ** 2);
     if (len === 0) continue;
     axes.push({ x: -edge.y / len, y: edge.x / len });
@@ -77,8 +76,54 @@ export function polygonsOverlap(a: Position[], b: Position[]): boolean {
     const projA = projectPolygon(a, axis);
     const projB = projectPolygon(b, axis);
     if (projA.max <= projB.min || projB.max <= projA.min) {
-      return false; // Found a separating axis
+      return false;
     }
   }
   return true;
+}
+
+/** Ray-casting point-in-polygon test. */
+export function pointInPolygon(point: Position, polygon: Position[]): boolean {
+  let inside = false;
+  const n = polygon.length;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = polygon[i].x;
+    const yi = polygon[i].y;
+    const xj = polygon[j].x;
+    const yj = polygon[j].y;
+    const intersect =
+      yi > point.y !== yj > point.y &&
+      point.x < ((xj - xi) * (point.y - yi)) / (yj - yi + 1e-12) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+/** Axis-aligned bounding box of a polygon. */
+export function polygonBoundingBox(polygon: Position[]): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+} {
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+  for (const p of polygon) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+/** Convert a polygon to a flat points array for Konva's Line component. */
+export function polygonToKonvaPoints(polygon: Position[]): number[] {
+  const pts: number[] = [];
+  for (const p of polygon) {
+    pts.push(p.x, p.y);
+  }
+  return pts;
 }

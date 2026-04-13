@@ -2,16 +2,23 @@ import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import type { Equipment, EquipmentType, Position, Room } from '@/types/room';
 import { DEFAULT_ROOM, EQUIPMENT_CATALOG } from '@/constants/room-defaults';
+import { polygonBoundingBox } from '@/utils/geometry';
 
 interface RoomState {
   room: Room;
 
   addEquipment: (type: EquipmentType) => void;
+  addEquipmentAt: (type: EquipmentType, position: Position, rotation?: number, label?: string) => void;
   removeEquipment: (id: string) => void;
   moveEquipment: (id: string, position: Position) => void;
   rotateEquipment: (id: string, angle: number) => void;
   toggleLock: (id: string) => void;
   setRoomDimensions: (width: number, height: number) => void;
+  setRoomPolygon: (polygon: Position[] | null) => void;
+  setBackgroundImage: (dataUrl: string | undefined, opacity?: number) => void;
+  setBackgroundOpacity: (opacity: number) => void;
+  replaceRoom: (room: Room) => void;
+  clearEquipment: () => void;
 }
 
 export const useRoomStore = create<RoomState>((set) => ({
@@ -35,6 +42,33 @@ export const useRoomStore = create<RoomState>((set) => ({
         isLocked: false,
         color: catalog.color,
         zIndex: state.room.equipment.length,
+        shape: catalog.shape,
+      };
+
+      return {
+        room: {
+          ...state.room,
+          equipment: [...state.room.equipment, newItem],
+        },
+      };
+    }),
+
+  addEquipmentAt: (type, position, rotation = 0, label) =>
+    set((state) => {
+      const catalog = EQUIPMENT_CATALOG.find((e) => e.type === type);
+      if (!catalog) return state;
+
+      const newItem: Equipment = {
+        id: uuidv4(),
+        type: catalog.type,
+        label: label ?? catalog.label,
+        position,
+        rotation,
+        dimensions: { ...catalog.dimensions },
+        isLocked: false,
+        color: catalog.color,
+        zIndex: state.room.equipment.length,
+        shape: catalog.shape,
       };
 
       return {
@@ -87,4 +121,47 @@ export const useRoomStore = create<RoomState>((set) => ({
     set((state) => ({
       room: { ...state.room, width, height },
     })),
+
+  setRoomPolygon: (polygon) =>
+    set((state) => {
+      if (!polygon || polygon.length < 3) {
+        return {
+          room: { ...state.room, shape: 'rectangular', polygon: undefined },
+        };
+      }
+      const bbox = polygonBoundingBox(polygon);
+      // Normalize so polygon starts at (0, 0)
+      const normalized = polygon.map((p) => ({
+        x: p.x - bbox.minX,
+        y: p.y - bbox.minY,
+      }));
+      return {
+        room: {
+          ...state.room,
+          shape: 'polygon',
+          polygon: normalized,
+          width: bbox.maxX - bbox.minX,
+          height: bbox.maxY - bbox.minY,
+        },
+      };
+    }),
+
+  setBackgroundImage: (dataUrl, opacity = 0.35) =>
+    set((state) => ({
+      room: {
+        ...state.room,
+        backgroundImage: dataUrl,
+        backgroundOpacity: opacity,
+      },
+    })),
+
+  setBackgroundOpacity: (opacity) =>
+    set((state) => ({
+      room: { ...state.room, backgroundOpacity: opacity },
+    })),
+
+  replaceRoom: (room) => set({ room }),
+
+  clearEquipment: () =>
+    set((state) => ({ room: { ...state.room, equipment: [] } })),
 }));

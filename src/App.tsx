@@ -4,6 +4,7 @@ import { SidePanel } from '@/components/layout/side-panel';
 import { EquipmentPalette } from '@/components/room-planner/equipment-palette';
 import { EquipmentProperties } from '@/components/room-planner/equipment-properties';
 import { RoomCanvas } from '@/components/room-planner/room-canvas';
+import { ImportModal } from '@/components/image-import/import-modal';
 import { useAppStore } from '@/stores/app-store';
 
 function RoomTab() {
@@ -43,6 +44,7 @@ export default function App() {
         )}
         {activeTab === 'ports' && <PlaceholderTab title="Port Placement" />}
       </main>
+      <ImportModal />
     </div>
   );
 }

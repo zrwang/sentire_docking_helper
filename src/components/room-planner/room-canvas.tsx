@@ -7,6 +7,7 @@ import { useCanvasZoom } from '@/hooks/use-canvas-zoom';
 import { RoomGrid } from './room-grid';
 import { RoomWalls } from './room-walls';
 import { EquipmentItem } from './equipment-item';
+import { BackgroundImage } from './background-image';
 
 export function RoomCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,7 +28,6 @@ export function RoomCanvas() {
 
   useEffect(() => {
     updateSize();
-    // Small delay to ensure layout is settled before fitting room to view
     const timer = setTimeout(() => {
       if (containerRef.current) {
         resetZoom(
@@ -39,9 +39,21 @@ export function RoomCanvas() {
       }
     }, 50);
     return () => clearTimeout(timer);
-    // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When room dimensions change dramatically (e.g. after import), refit view
+  useEffect(() => {
+    if (containerRef.current) {
+      resetZoom(
+        containerRef.current.offsetWidth,
+        containerRef.current.offsetHeight,
+        room.width,
+        room.height
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room.width, room.height, room.shape]);
 
   useEffect(() => {
     const handleResize = () => updateSize();
@@ -56,7 +68,7 @@ export function RoomCanvas() {
   };
 
   return (
-    <div ref={containerRef} className="flex-1 bg-gray-950 overflow-hidden">
+    <div ref={containerRef} className="flex-1 bg-gray-950 overflow-hidden relative">
       <Stage
         ref={stageRef}
         width={containerSize.width}
@@ -70,6 +82,24 @@ export function RoomCanvas() {
         onClick={handleStageClick}
         onTap={handleStageClick}
       >
+        {/* Room floor + walls */}
+        <Layer listening={false}>
+          <RoomWalls room={room} />
+        </Layer>
+
+        {/* Optional uploaded background image */}
+        {room.backgroundImage && (
+          <Layer listening={false}>
+            <BackgroundImage
+              dataUrl={room.backgroundImage}
+              width={room.width}
+              height={room.height}
+              opacity={room.backgroundOpacity ?? 0.35}
+            />
+          </Layer>
+        )}
+
+        {/* Grid */}
         <Layer listening={false}>
           <RoomGrid
             width={room.width}
@@ -79,10 +109,7 @@ export function RoomCanvas() {
           />
         </Layer>
 
-        <Layer listening={false}>
-          <RoomWalls width={room.width} height={room.height} />
-        </Layer>
-
+        {/* Equipment */}
         <Layer>
           {room.equipment.map((item) => (
             <EquipmentItem key={item.id} item={item} scale={scale} />

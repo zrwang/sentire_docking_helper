@@ -1,10 +1,12 @@
 import { useAppStore } from '@/stores/app-store';
 import { useRoomStore } from '@/stores/room-store';
+import { useImportStore } from '@/stores/import-store';
 import { MIN_ROOM_SIZE, MAX_ROOM_SIZE } from '@/constants/room-defaults';
 
 export function AppHeader() {
   const { snapEnabled, gridVisible, toggleSnap, toggleGrid } = useAppStore();
-  const { room, setRoomDimensions } = useRoomStore();
+  const { room, setRoomDimensions, setBackgroundOpacity, setBackgroundImage } = useRoomStore();
+  const openImport = useImportStore((s) => s.openImport);
 
   const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, Number(e.target.value)));
@@ -47,6 +49,35 @@ export function AppHeader() {
           />
           <span className="text-gray-500">cm</span>
         </div>
+
+        {room.backgroundImage && (
+          <div className="flex items-center gap-2">
+            <label className="text-gray-400 text-xs">BG:</label>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={room.backgroundOpacity ?? 0.35}
+              onChange={(e) => setBackgroundOpacity(Number(e.target.value))}
+              className="w-20"
+            />
+            <button
+              onClick={() => setBackgroundImage(undefined)}
+              className="px-2 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 rounded"
+              title="Remove background image"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={openImport}
+          className="px-2.5 py-1 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 rounded"
+        >
+          Import Plan
+        </button>
 
         <div className="flex items-center gap-1">
           <button

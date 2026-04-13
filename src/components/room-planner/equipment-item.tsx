@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Group, Rect, Text } from 'react-konva';
+import { Group, Rect, Text, Circle } from 'react-konva';
 import type Konva from 'konva';
 import type { Equipment } from '@/types/room';
 import { useAppStore } from '@/stores/app-store';
@@ -22,7 +22,6 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   const hw = item.dimensions.width / 2;
   const hh = item.dimensions.height / 2;
 
-  // Group x/y = center of the item (for rotation), offset shifts the children
   const centerX = item.position.x + hw;
   const centerY = item.position.y + hh;
 
@@ -33,11 +32,9 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
-    // node x/y is the center position
     let cx = node.x();
     let cy = node.y();
 
-    // Convert to top-left for snapping/constraining
     let tlx = cx - hw;
     let tly = cy - hh;
 
@@ -46,18 +43,15 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
       tly = snapToGrid(tly, room.gridSize);
     }
 
-    // Constrain to room
     tlx = Math.max(0, Math.min(tlx, room.width - item.dimensions.width));
     tly = Math.max(0, Math.min(tly, room.height - item.dimensions.height));
 
-    // Convert back to center
     node.x(tlx + hw);
     node.y(tly + hh);
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
-    // Convert center back to top-left for store
     const tlx = node.x() - hw;
     const tly = node.y() - hh;
     moveEquipment(item.id, { x: tlx, y: tly });
@@ -72,9 +66,9 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   };
 
   const fillColor = isOverlapping ? '#EF4444' : item.color;
+  const isCircle = item.shape === 'circle';
 
-  // Truncate label to fit
-  const maxChars = Math.floor(item.dimensions.width / 8);
+  const maxChars = Math.floor(item.dimensions.width / 7);
   const displayLabel =
     item.label.length > maxChars
       ? item.label.slice(0, maxChars - 1) + '...'
@@ -97,7 +91,7 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
       onDblTap={handleDblClick}
     >
       {/* Selection border */}
-      {isSelected && (
+      {isSelected && !isCircle && (
         <Rect
           x={-3}
           y={-3}
@@ -109,24 +103,47 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
           listening={false}
         />
       )}
+      {isSelected && isCircle && (
+        <Circle
+          x={hw}
+          y={hh}
+          radius={hw + 3}
+          stroke="#3B82F6"
+          strokeWidth={2 / scale}
+          dash={[6, 3]}
+          listening={false}
+        />
+      )}
 
       {/* Equipment body */}
-      <Rect
-        width={item.dimensions.width}
-        height={item.dimensions.height}
-        fill={fillColor}
-        opacity={isOverlapping ? 0.7 : 0.6}
-        stroke={isSelected ? '#60A5FA' : '#6B7280'}
-        strokeWidth={isSelected ? 1.5 / scale : 0.5 / scale}
-        cornerRadius={3}
-      />
+      {isCircle ? (
+        <Circle
+          x={hw}
+          y={hh}
+          radius={hw}
+          fill={fillColor}
+          opacity={isOverlapping ? 0.75 : 0.75}
+          stroke={isSelected ? '#60A5FA' : '#4B5563'}
+          strokeWidth={isSelected ? 1.5 / scale : 0.5 / scale}
+        />
+      ) : (
+        <Rect
+          width={item.dimensions.width}
+          height={item.dimensions.height}
+          fill={fillColor}
+          opacity={isOverlapping ? 0.7 : 0.7}
+          stroke={isSelected ? '#60A5FA' : '#4B5563'}
+          strokeWidth={isSelected ? 1.5 / scale : 0.5 / scale}
+          cornerRadius={3}
+        />
+      )}
 
       {/* Label */}
       <Text
         width={item.dimensions.width}
         height={item.dimensions.height}
         text={displayLabel}
-        fontSize={Math.min(12, item.dimensions.height / 3)}
+        fontSize={Math.min(11, Math.max(7, item.dimensions.height / 4))}
         fill="white"
         fontStyle="bold"
         align="center"
