@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { useAppStore } from '@/stores/app-store';
 import { useRoomStore } from '@/stores/room-store';
+import { useIconStore } from '@/stores/icon-store';
 import { SidePanelSection } from '@/components/layout/side-panel';
 
 export function EquipmentProperties() {
@@ -7,6 +9,10 @@ export function EquipmentProperties() {
   const selectEquipment = useAppStore((s) => s.selectEquipment);
   const { room, moveEquipment, rotateEquipment, toggleLock, removeEquipment } =
     useRoomStore();
+  const icons = useIconStore((s) => s.icons);
+  const setIcon = useIconStore((s) => s.setIcon);
+  const clearIcon = useIconStore((s) => s.clearIcon);
+  const iconInputRef = useRef<HTMLInputElement>(null);
 
   const item = room.equipment.find((e) => e.id === selectedId);
 
@@ -39,6 +45,22 @@ export function EquipmentProperties() {
     removeEquipment(item.id);
     selectEquipment(null);
   };
+
+  const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !item) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setIcon(item.type, reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    // allow re-selecting the same file later
+    e.target.value = '';
+  };
+
+  const currentIcon = icons[item.type];
 
   return (
     <SidePanelSection title="Properties">
@@ -96,6 +118,49 @@ export function EquipmentProperties() {
             disabled={item.isLocked}
             className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50"
           />
+        </div>
+
+        {/* Custom icon (applies to all items of this type) */}
+        <div className="pt-2 border-t border-gray-800">
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-[10px] text-gray-500">
+              Icon for all "{item.label}"
+            </label>
+            {currentIcon && (
+              <button
+                onClick={() => clearIcon(item.type)}
+                className="text-[10px] text-gray-500 hover:text-red-400"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              ref={iconInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              onChange={handleIconUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => iconInputRef.current?.click()}
+              className="flex-1 px-2 py-1.5 rounded text-xs bg-gray-700 hover:bg-gray-600 text-gray-200"
+            >
+              {currentIcon ? 'Replace icon' : 'Upload icon'}
+            </button>
+            {currentIcon && (
+              <img
+                src={currentIcon}
+                alt="icon preview"
+                className="h-8 w-8 object-contain border border-gray-700 rounded bg-gray-950"
+              />
+            )}
+          </div>
+          <p className="text-[10px] text-gray-600 mt-1">
+            PNG / SVG recommended. The image replaces the coloured square for every
+            "{item.label}" on the canvas.
+          </p>
         </div>
 
         {/* Actions */}

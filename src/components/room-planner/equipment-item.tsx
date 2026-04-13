@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
-import { Group, Rect, Text, Circle } from 'react-konva';
+import { Group, Rect, Text, Circle, Image as KonvaImage } from 'react-konva';
 import type Konva from 'konva';
 import type { Equipment } from '@/types/room';
 import { useAppStore } from '@/stores/app-store';
 import { useRoomStore } from '@/stores/room-store';
+import { useIconStore } from '@/stores/icon-store';
 import { snapToGrid } from '@/utils/snap';
 import { getOverlappingItems } from '@/utils/collision';
 
@@ -16,8 +17,24 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   const groupRef = useRef<Konva.Group>(null);
   const { selectedEquipmentId, selectEquipment, snapEnabled } = useAppStore();
   const { room, moveEquipment, rotateEquipment } = useRoomStore();
+  const iconDataUrl = useIconStore((s) => s.icons[item.type]);
+  const [iconImage, setIconImage] = useState<HTMLImageElement | null>(null);
   const [isOverlapping, setIsOverlapping] = useState(false);
   const isSelected = selectedEquipmentId === item.id;
+
+  // Load the custom icon (if any) into an <img> so Konva can paint it.
+  useEffect(() => {
+    if (!iconDataUrl) {
+      setIconImage(null);
+      return;
+    }
+    const img = new window.Image();
+    img.src = iconDataUrl;
+    img.onload = () => setIconImage(img);
+    return () => {
+      img.onload = null;
+    };
+  }, [iconDataUrl]);
 
   const hw = item.dimensions.width / 2;
   const hh = item.dimensions.height / 2;
@@ -116,7 +133,36 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
       )}
 
       {/* Equipment body */}
-      {isCircle ? (
+      {iconImage ? (
+        <>
+          <KonvaImage
+            image={iconImage}
+            width={item.dimensions.width}
+            height={item.dimensions.height}
+            opacity={isOverlapping ? 0.8 : 1}
+          />
+          {/* Red overlay tint when overlapping */}
+          {isOverlapping && (
+            <Rect
+              width={item.dimensions.width}
+              height={item.dimensions.height}
+              fill="#EF4444"
+              opacity={0.3}
+              listening={false}
+            />
+          )}
+          {/* Selection border around the image */}
+          {isSelected && (
+            <Rect
+              width={item.dimensions.width}
+              height={item.dimensions.height}
+              stroke="#60A5FA"
+              strokeWidth={1.5 / scale}
+              listening={false}
+            />
+          )}
+        </>
+      ) : isCircle ? (
         <Circle
           x={hw}
           y={hh}
@@ -138,18 +184,20 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
         />
       )}
 
-      {/* Label */}
-      <Text
-        width={item.dimensions.width}
-        height={item.dimensions.height}
-        text={displayLabel}
-        fontSize={Math.min(11, Math.max(7, item.dimensions.height / 4))}
-        fill="white"
-        fontStyle="bold"
-        align="center"
-        verticalAlign="middle"
-        listening={false}
-      />
+      {/* Label (hidden when a custom icon is drawn so it doesn't obscure it) */}
+      {!iconImage && (
+        <Text
+          width={item.dimensions.width}
+          height={item.dimensions.height}
+          text={displayLabel}
+          fontSize={Math.min(11, Math.max(7, item.dimensions.height / 4))}
+          fill="white"
+          fontStyle="bold"
+          align="center"
+          verticalAlign="middle"
+          listening={false}
+        />
+      )}
 
       {/* Lock indicator */}
       {item.isLocked && (
