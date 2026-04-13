@@ -279,6 +279,16 @@ export function ImportModal() {
             )}
           </section>
 
+          {status === 'analyzing' && (
+            <div className="flex items-center gap-3 px-3 py-2 bg-blue-900/40 border border-blue-700 rounded text-xs text-blue-200">
+              <span className="sr-spinner" aria-hidden="true" />
+              <span>
+                Claude is analyzing your floor plan. This call is synchronous;
+                please keep this tab open.
+              </span>
+            </div>
+          )}
+
           {error && (
             <div className="px-3 py-2 bg-red-900/40 border border-red-700 rounded text-xs text-red-300 whitespace-pre-wrap">
               {error}
