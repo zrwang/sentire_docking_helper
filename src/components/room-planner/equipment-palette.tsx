@@ -29,7 +29,6 @@ export function EquipmentPalette() {
   const hideType = usePaletteVisibilityStore((s) => s.hide);
   const unhideType = usePaletteVisibilityStore((s) => s.unhide);
   const markDeleted = usePaletteVisibilityStore((s) => s.markDeleted);
-  const undeleteType = usePaletteVisibilityStore((s) => s.undelete);
   const restoreAllHidden = usePaletteVisibilityStore((s) => s.restoreAll);
   const paletteOrder = usePaletteVisibilityStore((s) => s.order);
   const setPaletteOrder = usePaletteVisibilityStore((s) => s.setOrder);
@@ -224,15 +223,6 @@ export function EquipmentPalette() {
         x !== null
     );
 
-  // "Removed" list -- built-in types the user deleted. Custom types get hard-
-  // removed immediately so they never land here.
-  const deletedLabels = deletedTypes
-    .map(resolveLabel)
-    .filter(
-      (x): x is { type: EquipmentType; label: string; isCustom: boolean } =>
-        x !== null
-    );
-
   const handleHide = (e: React.MouseEvent, type: EquipmentType) => {
     e.stopPropagation();
     e.preventDefault();
@@ -252,7 +242,7 @@ export function EquipmentPalette() {
     }
     if (
       !window.confirm(
-        `Permanently remove "${label}" from the palette? Use "Reset palette" at the bottom of the Equipment list if you change your mind.`
+        `Permanently remove "${label}" from the palette?`
       )
     ) {
       return;
@@ -466,7 +456,7 @@ export function EquipmentPalette() {
                       title={
                         h.isCustom
                           ? 'Permanently delete this custom equipment'
-                          : 'Permanently remove from the palette (use "Reset palette" at the bottom to bring it back)'
+                          : 'Permanently remove from the palette'
                       }
                       className="text-[10px] text-gray-400 hover:text-red-400"
                     >
@@ -493,26 +483,6 @@ export function EquipmentPalette() {
         >
           + Add custom equipment
         </button>
-
-        {deletedLabels.length > 0 && (
-          <button
-            onClick={() => {
-              if (
-                window.confirm(
-                  `Restore ${deletedLabels.length} deleted built-in item${
-                    deletedLabels.length === 1 ? '' : 's'
-                  } back into the palette?`
-                )
-              ) {
-                deletedLabels.forEach((d) => undeleteType(d.type));
-              }
-            }}
-            title="Bring back every built-in equipment type you've deleted"
-            className="mt-1 px-2 py-0.5 text-[10px] text-gray-600 hover:text-emerald-400 text-left"
-          >
-            ⟲ Reset palette ({deletedLabels.length} deleted)
-          </button>
-        )}
       </div>
 
       <CustomEquipmentModal open={modalOpen} onClose={() => setModalOpen(false)} />

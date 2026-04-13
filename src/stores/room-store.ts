@@ -452,6 +452,16 @@ export const useRoomStore = create<RoomState>((set) => ({
         ...e,
         position: { x: e.position.x + dx, y: e.position.y + dy },
       }));
+      // Shift the background overlay by the same delta so it stays visually
+      // anchored when the caller compensates the camera. We also promote any
+      // implicit "fill the room" fallbacks to explicit values using the OLD
+      // room dimensions -- otherwise the picture would snap to the new
+      // (possibly smaller) room size and visibly resize.
+      const hasBg = Boolean(state.room.backgroundImage);
+      const oldBgX = state.room.backgroundX ?? 0;
+      const oldBgY = state.room.backgroundY ?? 0;
+      const oldBgW = state.room.backgroundWidth ?? state.room.width;
+      const oldBgH = state.room.backgroundHeight ?? state.room.height;
       return {
         room: {
           ...state.room,
@@ -459,6 +469,14 @@ export const useRoomStore = create<RoomState>((set) => ({
           equipment,
           width: bbox.maxX - bbox.minX,
           height: bbox.maxY - bbox.minY,
+          ...(hasBg
+            ? {
+                backgroundX: oldBgX + dx,
+                backgroundY: oldBgY + dy,
+                backgroundWidth: oldBgW,
+                backgroundHeight: oldBgH,
+              }
+            : {}),
         },
       };
     });
