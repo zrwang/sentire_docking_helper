@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Group, Rect, Text, Circle, Image as KonvaImage } from 'react-konva';
+import { Group, Rect, Text, Circle, Line, Image as KonvaImage } from 'react-konva';
 import type Konva from 'konva';
 import type { Equipment } from '@/types/room';
 import { useAppStore } from '@/stores/app-store';
@@ -41,6 +41,10 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
 
   const centerX = item.position.x + hw;
   const centerY = item.position.y + hh;
+
+  // Distance (in cm) from the item's top to the rotation handle. Keeps the
+  // handle visible at any zoom level.
+  const handleOffset = 18 / scale + 8;
 
   useEffect(() => {
     const overlaps = getOverlappingItems(item, room.equipment);
@@ -94,7 +98,29 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
   };
 
   const handleDblClick = () => {
-    rotateEquipment(item.id, item.rotation + 90);
+    rotateEquipment(item.id, (item.rotation + 90) % 360);
+  };
+
+  const handleRotationDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const layer = e.target.getLayer();
+    if (!layer) return;
+    const pointer = layer.getRelativePointerPosition();
+    if (!pointer) return;
+    const dx = pointer.x - centerX;
+    const dy = pointer.y - centerY;
+    // atan2 returns 0 = east; we want 0 = north (item's top), so +90.
+    let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+    angle = ((angle % 360) + 360) % 360;
+    if (snapEnabled) angle = Math.round(angle / 15) * 15;
+    rotateEquipment(item.id, angle);
+    // Pin the handle to its local anchor so it stays "north" of the item.
+    e.target.x(hw);
+    e.target.y(-handleOffset);
+  };
+
+  const handleRotationDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    e.target.x(hw);
+    e.target.y(-handleOffset);
   };
 
   const fillColor = isOverlapping ? '#EF4444' : item.color;
@@ -227,6 +253,46 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
           fill="#FCD34D"
           listening={false}
         />
+      )}
+
+      {/* Rotation handle: a knob above the item; drag to rotate. */}
+      {isSelected && !item.isLocked && (
+        <>
+          <Line
+            points={[hw, 0, hw, -handleOffset]}
+            stroke="#60A5FA"
+            strokeWidth={1 / scale}
+            dash={[4 / scale, 3 / scale]}
+            listening={false}
+          />
+          <Circle
+            x={hw}
+            y={-handleOffset}
+            radius={8 / scale}
+            fill="#3B82F6"
+            stroke="white"
+            strokeWidth={1.5 / scale}
+            draggable
+            onMouseDown={(e) => {
+              e.cancelBubble = true;
+              handleSelectOnInteract();
+            }}
+            onTouchStart={(e) => {
+              e.cancelBubble = true;
+              handleSelectOnInteract();
+            }}
+            onDragMove={handleRotationDragMove}
+            onDragEnd={handleRotationDragEnd}
+            onMouseEnter={(e) => {
+              const stage = e.target.getStage();
+              if (stage) stage.container().style.cursor = 'grab';
+            }}
+            onMouseLeave={(e) => {
+              const stage = e.target.getStage();
+              if (stage) stage.container().style.cursor = '';
+            }}
+          />
+        </>
       )}
 
       {/* In-canvas delete badge shown on the selected item */}
