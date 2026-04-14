@@ -83,15 +83,15 @@ export function AppHeader() {
   };
 
   return (
-    <header className="flex items-center justify-between px-4 py-2 bg-gray-900 text-white border-b border-gray-700 shrink-0">
-      <div className="flex items-center gap-3">
+    <header className="flex items-center justify-between gap-4 px-4 py-2 bg-gray-900 text-white border-b border-gray-700 shrink-0 whitespace-nowrap">
+      <div className="flex items-center gap-3 shrink-0">
         <h1 className="text-lg font-semibold tracking-tight">
           Surgical Room Planner
         </h1>
         <span className="text-xs text-gray-400">da Vinci X</span>
       </div>
 
-      <div className="flex items-center gap-4 text-sm">
+      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">
         <div className="flex items-center gap-2">
           <label className="text-gray-400">Room:</label>
           <input
