@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 const STORAGE_KEY = 'sentire.surgicalTeam.v1';
 
 /**
- * Common roles for a da Vinci robotic-surgery OR. Users can also enter a
+ * Common roles for a Sentire robotic-surgery OR. Users can also enter a
  * free-form role when picking "Other" in the UI, so this list is just a
  * convenience, not an enum.
  */

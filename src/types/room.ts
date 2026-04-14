@@ -10,7 +10,7 @@ export interface Dimensions {
 
 export type EquipmentType =
   | 'operating-table'
-  | 'patient-cart'           // da Vinci X Patient Side Robot (PSR) -- legacy
+  | 'patient-cart'           // Sentire C1000 Patient Side Robot (PSR) -- legacy
   | 'patient-cart-3arm'      // PSR: 3-arm configuration
   | 'patient-cart-4arm-left' // PSR: 4-arm configuration, left docking
   | 'patient-cart-4arm-right'// PSR: 4-arm configuration, right docking

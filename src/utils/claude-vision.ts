@@ -58,7 +58,7 @@ const EQUIPMENT_TYPES: EquipmentType[] = [
   'generic',
 ];
 
-const SYSTEM_PROMPT = `You are an expert at analysing surgical operating-room floor-plan diagrams, especially setups for the da Vinci X robotic surgery system.
+const SYSTEM_PROMPT = `You are an expert at analysing surgical operating-room floor-plan diagrams, especially setups for the Sentire C1000 robotic surgery system.
 
 Given an image of an OR floor plan, identify:
 - The outline (polygon) of the room in image pixels.
@@ -68,7 +68,7 @@ Given an image of an OR floor plan, identify:
 Use only these equipment types (pick the closest match; use "generic" when nothing fits):
 ${EQUIPMENT_TYPES.join(', ')}
 
-Common da Vinci X floor-plan abbreviations:
+Common Sentire C1000 floor-plan abbreviations:
 - PSR / Patient Side Robot / Patient Cart -> patient-cart-4arm-left (default); pick patient-cart-3arm if only 3 arms are shown, patient-cart-4arm-right if arms visibly fan to the right side of the base
 - Backup PSR / 2nd PSR -> patient-cart-backup
 - Surgeon Console / SC -> surgeon-console

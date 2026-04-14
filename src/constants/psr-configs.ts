@@ -1,7 +1,7 @@
 import type { EquipmentCatalogEntry, Position } from '@/types/room';
 
 /**
- * Patient Side Robot (da Vinci X) configurations. Each config has a distinct
+ * Patient Side Robot (Sentire C1000) configurations. Each config has a distinct
  * footprint so the three arm arrangements are visually distinguishable on the
  * canvas even without uploading a custom icon. Users can still override the
  * size, outline, and icon per config via the right-click menu.

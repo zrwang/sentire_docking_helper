@@ -88,7 +88,7 @@ export function AppHeader() {
         <h1 className="text-lg font-semibold tracking-tight">
           Surgical Room Planner
         </h1>
-        <span className="text-xs text-gray-400">da Vinci X</span>
+        <span className="text-xs text-gray-400">Sentire C1000</span>
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">

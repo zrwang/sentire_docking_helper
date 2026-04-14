@@ -57,7 +57,7 @@ export function createPartialNephrectomyPreset(): Room {
     { type: 'anesthetic-trolley', label: 'Anesthetic Trolley', position: { x: 35, y: 120 }, rotation: 90 },
     { type: 'anesthesia-station', label: 'Anesthetic Machine', position: { x: 180, y: 330 } },
 
-    // --- Centre: operating table + da Vinci patient carts ---
+    // --- Centre: operating table + Sentire patient carts ---
     { type: 'operating-table', label: 'Operating Table', position: { x: 430, y: 290 }, rotation: 90 },
     { type: 'patient-cart-4arm-left', label: 'PSR (4-arm, left)', position: { x: 440, y: 220 } },
     {
