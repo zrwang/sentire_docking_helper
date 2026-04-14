@@ -67,19 +67,34 @@ export function EquipmentItem({ item, scale }: EquipmentItemProps) {
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
-    let cx = node.x();
-    let cy = node.y();
+    const cx = node.x();
+    const cy = node.y();
 
-    let tlx = cx - hw;
-    let tly = cy - hh;
+    const maxTlx = room.width - item.dimensions.width;
+    const maxTly = room.height - item.dimensions.height;
+
+    // Clamp against the room walls first, so the raw position never exceeds
+    // the reachable range. This also lets us compare distance-to-wall below.
+    let tlx = Math.max(0, Math.min(cx - hw, maxTlx));
+    let tly = Math.max(0, Math.min(cy - hh, maxTly));
 
     if (snapEnabled) {
-      tlx = snapToGrid(tlx, room.gridSize);
-      tly = snapToGrid(tly, room.gridSize);
+      const g = room.gridSize;
+      const snappedX = snapToGrid(tlx, g);
+      const snappedY = snapToGrid(tly, g);
+      // Wall-snap takes priority: if the raw position is within half a grid
+      // step of a wall, snap flush to that wall instead of to the nearest
+      // grid line. Prevents the "always a small gap" bug when the room's
+      // dimensions (or the item's size) aren't a multiple of the grid.
+      const half = g / 2;
+      tlx =
+        tlx < half ? 0 : maxTlx - tlx < half ? maxTlx : snappedX;
+      tly =
+        tly < half ? 0 : maxTly - tly < half ? maxTly : snappedY;
+      // Re-clamp in case snapToGrid pushed past a wall.
+      tlx = Math.max(0, Math.min(tlx, maxTlx));
+      tly = Math.max(0, Math.min(tly, maxTly));
     }
-
-    tlx = Math.max(0, Math.min(tlx, room.width - item.dimensions.width));
-    tly = Math.max(0, Math.min(tly, room.height - item.dimensions.height));
 
     node.x(tlx + hw);
     node.y(tly + hh);
