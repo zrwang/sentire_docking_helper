@@ -23,7 +23,7 @@ export function RoomCanvas() {
     useRoomStore();
   const { gridVisible, snapEnabled, selectEquipment, contourEditMode, bgAdjustMode, bgCalibrationMode, setBgCalibrationMode, setCanvasExporter } =
     useAppStore();
-  const { scale, position, stageRef, handleWheel, resetZoom, panByRoomDelta } =
+  const { scale, position, stageRef, handleWheel, handleDragEnd, resetZoom, panByRoomDelta } =
     useCanvasZoom(0.6);
 
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
@@ -304,6 +304,7 @@ export function RoomCanvas() {
         // panning so a drag doesn't hijack the second click.
         draggable={!bgCalibrationMode}
         onWheel={handleWheel}
+        onDragEnd={handleDragEnd}
         onClick={handleStageClick}
         onTap={handleStageClick}
         onMouseMove={handleStageMouseMove}
