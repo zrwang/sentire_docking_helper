@@ -8,6 +8,7 @@ import { ContextMenuHost } from '@/components/room-planner/context-menu-host';
 import { ImportModal } from '@/components/image-import/import-modal';
 import { useAppStore } from '@/stores/app-store';
 import { useDeleteShortcut } from '@/hooks/use-delete-shortcut';
+import { useHistory } from '@/hooks/use-history';
 
 function RoomTab() {
   return (
@@ -35,6 +36,7 @@ function PlaceholderTab({ title }: { title: string }) {
 export default function App() {
   const activeTab = useAppStore((s) => s.activeTab);
   useDeleteShortcut();
+  useHistory();
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white">

@@ -5,6 +5,8 @@ import { useLayoutsStore } from '@/stores/layouts-store';
 import { MIN_ROOM_SIZE, MAX_ROOM_SIZE } from '@/constants/room-defaults';
 import { createPartialNephrectomyPreset } from '@/constants/preset-layouts';
 import { LayoutsMenu } from './layouts-menu';
+import { useHistoryStore } from '@/stores/history-store';
+import { undo, redo } from '@/hooks/use-history';
 
 export function AppHeader() {
   const { snapEnabled, gridVisible, toggleSnap, toggleGrid, selectEquipment, contourEditMode, setContourEditMode, bgAdjustMode, setBgAdjustMode, bgCalibrationMode, setBgCalibrationMode, canvasExporter } = useAppStore();
@@ -14,6 +16,8 @@ export function AppHeader() {
   const demoLayout = useLayoutsStore((s) =>
     s.demoName ? s.layouts[s.demoName] : undefined
   );
+  const canUndo = useHistoryStore((s) => s.past.length > 0);
+  const canRedo = useHistoryStore((s) => s.future.length > 0);
 
   const handleToggleContourEdit = () => {
     if (!contourEditMode) {
@@ -174,6 +178,25 @@ export function AppHeader() {
             </button>
           </div>
         )}
+
+        <div className="flex items-center">
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (Ctrl/Cmd+Z)"
+            className="px-2 py-1 text-xs font-medium bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed rounded-l"
+          >
+            Undo
+          </button>
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (Ctrl/Cmd+Shift+Z)"
+            className="px-2 py-1 text-xs font-medium bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed rounded-r border-l border-gray-800"
+          >
+            Redo
+          </button>
+        </div>
 
         <button
           onClick={openImport}
