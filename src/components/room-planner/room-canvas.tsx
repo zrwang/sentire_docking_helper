@@ -187,12 +187,12 @@ export function RoomCanvas() {
   const handleRoomResizeDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
     const node = e.target;
-    let w = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, node.x()));
-    let h = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, node.y()));
-    if (snapEnabled) {
-      w = snapToGrid(w, room.gridSize);
-      h = snapToGrid(h, room.gridSize);
-    }
+    // Track the cursor continuously -- do NOT snap to grid here. Snapping
+    // during every frame made the walls jump in discrete gridSize steps,
+    // which reads as jitter at moderate zoom levels. We snap once on
+    // dragEnd below so the final size still lands on the grid.
+    const w = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, node.x()));
+    const h = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, node.y()));
     setRoomDimensions(w, h);
     node.x(w);
     node.y(h);
@@ -200,8 +200,18 @@ export function RoomCanvas() {
 
   const handleRoomResizeDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
-    e.target.x(room.width);
-    e.target.y(room.height);
+    const node = e.target;
+    let w = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, node.x()));
+    let h = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, node.y()));
+    if (snapEnabled) {
+      w = snapToGrid(w, room.gridSize);
+      h = snapToGrid(h, room.gridSize);
+      w = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, w));
+      h = Math.max(MIN_ROOM_SIZE, Math.min(MAX_ROOM_SIZE, h));
+    }
+    setRoomDimensions(w, h);
+    node.x(w);
+    node.y(h);
   };
 
   const showRoomResizeHandle =
