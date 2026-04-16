@@ -72,7 +72,7 @@ export function RoomWalls({ room }: RoomWallsProps) {
       <Text
         x={width / 2 - 40}
         y={-25}
-        text={`${width} cm`}
+        text={`${Math.round(width)} cm`}
         fontSize={14}
         fill="#9CA3AF"
         listening={false}
@@ -80,7 +80,7 @@ export function RoomWalls({ room }: RoomWallsProps) {
       <Text
         x={-50}
         y={height / 2 - 7}
-        text={`${height} cm`}
+        text={`${Math.round(height)} cm`}
         fontSize={14}
         fill="#9CA3AF"
         rotation={-90}
